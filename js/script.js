@@ -625,10 +625,18 @@ async function loadClients() {
                     // Formatar valor do plano
                     const valorPlano = c.planValue ? formatCurrency(c.planValue) : '---';
                     
+                    // Formatar data de nascimento
+                    let dataNascimentoFormatada = '---';
+                    if (c.birthDate) {
+                        const [ano, mes, dia] = c.birthDate.split('-');
+                        dataNascimentoFormatada = `${dia}/${mes}/${ano}`;
+                    }
+                    
                     return `
                     <tr>
                         <td data-label="Foto">${fotoHtml}</td>
                         <td data-label="Nome">${c.name || '---'}</td>
+                        <td data-label="Nascimento">${dataNascimentoFormatada}</td>
                         <td data-label="CPF">${cpfFormatado}</td>
                         <td data-label="Email">${c.email || '---'}</td>
                         <td data-label="Telefone">${c.phone || '---'}</td>
@@ -1369,6 +1377,7 @@ function handlePhotoSelect(event) {
 // ============================================
 // FUNÇÕES DO MODAL
 // ============================================
+
 function openModal(type, date = null) {
     currentModalType = type;
     editingId = null;
@@ -1472,7 +1481,7 @@ function openModal(type, date = null) {
         `;
     } else if (type === 'client') {
         // ============================================
-        // MODAL DE CLIENTE CORRIGIDO - AGORA COM PLANO E VALOR
+        // MODAL DE CLIENTE CORRIGIDO - AGORA COM DATA DE NASCIMENTO, PLANO E VALOR
         // ============================================
         fields.innerHTML = `
             <div class="photo-upload-container">
@@ -1504,6 +1513,16 @@ function openModal(type, date = null) {
                 <input type="text" id="modalCpf" class="form-control" required placeholder="000.000.000-00" maxlength="14" onkeyup="mascaraCPF(this)">
             </div>
             
+            <!-- ============================================ -->
+            <!-- NOVO CAMPO: DATA DE NASCIMENTO -->
+            <!-- ============================================ -->
+            <div class="form-group">
+                <label>Data de Nascimento *</label>
+                <input type="date" id="modalBirthDate" class="form-control" required max="${new Date().toISOString().split('T')[0]}">
+                <small style="color: var(--text-tertiary);">Formato: DD/MM/AAAA</small>
+            </div>
+            <!-- ============================================ -->
+            
             <div class="form-group">
                 <label>Email</label>
                 <input type="email" id="modalEmail" class="form-control" placeholder="email@exemplo.com">
@@ -1515,7 +1534,7 @@ function openModal(type, date = null) {
             </div>
             
             <!-- ============================================ -->
-            <!-- NOVOS CAMPOS: PLANO E VALOR -->
+            <!-- CAMPOS DE PLANO E VALOR -->
             <!-- ============================================ -->
             <div class="form-group">
                 <label>Plano do Cliente *</label>
@@ -1568,7 +1587,7 @@ function openModal(type, date = null) {
 }
 
 // ============================================
-// FUNÇÃO EDITITEM CORRIGIDA - AGORA COM PLANO E VALOR
+// FUNÇÃO EDITITEM CORRIGIDA - AGORA COM DATA DE NASCIMENTO, PLANO E VALOR
 // ============================================
 function editItem(type, id) {
     currentModalType = type;
@@ -1719,6 +1738,15 @@ function editItem(type, id) {
                     <label>CPF *</label>
                     <input type="text" id="modalCpf" class="form-control" value="${cpfFormatado}" required maxlength="14" onkeyup="mascaraCPF(this)">
                 </div>
+                
+                <!-- ============================================ -->
+                <!-- CAMPO DE DATA DE NASCIMENTO NA EDIÇÃO -->
+                <!-- ============================================ -->
+                <div class="form-group">
+                    <label>Data de Nascimento *</label>
+                    <input type="date" id="modalBirthDate" class="form-control" value="${data.birthDate || ''}" required max="${new Date().toISOString().split('T')[0]}">
+                </div>
+                <!-- ============================================ -->
                 
                 <div class="form-group">
                     <label>Email</label>
@@ -1922,7 +1950,7 @@ function closeModal() {
 }
 
 // ============================================
-// FUNÇÃO SAVEMODAL CORRIGIDA - AGORA SALVA PLANO E VALOR
+// FUNÇÃO SAVEMODAL CORRIGIDA - AGORA SALVA DATA DE NASCIMENTO, PLANO E VALOR
 // ============================================
 async function saveModal() {
     if (!currentModalType || !currentUserId) return;
@@ -1986,16 +2014,18 @@ async function saveModal() {
             const cpfInput = document.getElementById('modalCpf');
             const phoneInput = document.getElementById('modalPhone');
             const nameInput = document.getElementById('modalName');
+            const birthDateInput = document.getElementById('modalBirthDate');
             const planInput = document.getElementById('modalPlan');
             const planValueInput = document.getElementById('modalPlanValue');
             
-            if (!cpfInput || !phoneInput || !nameInput || !planInput || !planValueInput) {
+            if (!cpfInput || !phoneInput || !nameInput || !birthDateInput || !planInput || !planValueInput) {
                 throw new Error('Erro ao capturar dados do formulário');
             }
             
             const cpfRaw = cpfInput.value.replace(/\D/g, '');
             const phoneRaw = phoneInput.value.replace(/\D/g, '');
             const name = nameInput.value.trim();
+            const birthDate = birthDateInput.value;
             const plan = planInput.value;
             
             // Converter valor da moeda para número
@@ -2010,6 +2040,10 @@ async function saveModal() {
             
             if (!cpfRaw || cpfRaw.length !== 11) {
                 throw new Error('CPF inválido. Deve conter 11 dígitos.');
+            }
+            
+            if (!birthDate) {
+                throw new Error('Data de nascimento é obrigatória');
             }
             
             if (!phoneRaw) {
@@ -2028,6 +2062,7 @@ async function saveModal() {
                 userId: currentUserId,
                 name: name,
                 cpf: cpfRaw,
+                birthDate: birthDate,
                 email: document.getElementById('modalEmail')?.value || '',
                 phone: phoneRaw,
                 plan: plan,
