@@ -748,7 +748,7 @@ async function updateAppointmentsList(appointments) {
     const upcoming = appointments
         .filter(a => a.date >= today)
         .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
-        .slice(0, 5);
+        .slice(0, 1005);
     
     if (upcoming.length === 0) {
         list.innerHTML = `
@@ -796,7 +796,7 @@ async function updateAppointmentsList(appointments) {
                 <div class="appointment-info">
                     <div class="appointment-name">${client || 'Cliente'}</div>
                     <div class="appointment-service">
-                        <i class="fas fa-cut"></i> ${service || 'Serviço'}
+                        <i class="fas fa-pray"></i> ${service || 'Serviço'}
                         <i class="fas fa-user-md" style="margin-left: 8px;"></i> ${professional || 'Profissional'}
                     </div>
                 </div>
