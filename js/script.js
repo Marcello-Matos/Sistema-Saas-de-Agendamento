@@ -793,7 +793,7 @@ async function updateAppointmentsList(appointments) {
                 <div class="appointment-info">
                     <div class="appointment-name">${client || 'Cliente'}</div>
                     <div class="appointment-service">
-                        <i class="fas fa-pray"></i> ${service || 'Serviço'}
+                        <i class="fas fa-dumbbell"></i> ${service || 'Serviço'}
                         <i class="fas fa-user-md" style="margin-left: 8px;"></i> ${professional || 'Profissional'}
                     </div>
                 </div>
