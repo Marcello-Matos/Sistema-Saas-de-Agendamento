@@ -960,7 +960,7 @@ function showNotification(message, type = 'info') {
 }
 
 // ============================================
-// CALENDÁRIO PROFISSIONAL - ESTILO GOOGLE CALENDAR
+// CALENDÁRIO PROFISSIONAL - ESTILO GOOGLE CALENDAR COM NOVAS CORES
 // ============================================
 function initializeCalendar() {
     const calendarEl = document.getElementById('calendar');
@@ -977,7 +977,7 @@ function initializeCalendar() {
         }
     }
     
-    console.log('📅 Inicializando calendário profissional...');
+    console.log('📅 Inicializando calendário profissional com novas cores...');
     
     calendar = new FullCalendar.Calendar(calendarEl, {
         locale: 'pt-br',
@@ -1159,7 +1159,7 @@ function initializeCalendar() {
                 <div style="font-weight: 600; margin-bottom: 5px;">${props.clientName}</div>
                 <div style="font-size: 11px; color: #aaa;">${start} - ${end}</div>
                 <div style="font-size: 11px; margin-top: 3px;">
-                    <span style="color: #8ab4f8;">${props.serviceName}</span> com ${props.professionalName}
+                    <span style="color: #4f46e5;">${props.serviceName}</span> com ${props.professionalName}
                 </div>
                 <div style="font-size: 11px; margin-top: 3px;">
                     Status: ${getStatusText(props.status)}
@@ -1303,11 +1303,13 @@ async function loadCalendarEvents(fetchInfo, successCallback, failureCallback) {
                 endTime = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
             }
             
-            let backgroundColor = '#D91828';
-            if (data.status === 'pending') backgroundColor = '#D91414';
-            else if (data.status === 'attended') backgroundColor = '#22c55e';
-            else if (data.status === 'absent') backgroundColor = '#ef4444';
-            else if (data.status === 'cancelled') backgroundColor = '#6b7280';
+            // NOVAS CORES MAIS HARMONIOSAS
+            let backgroundColor = '#4f46e5'; // Roxo suave (padrão)
+            if (data.status === 'pending') backgroundColor = '#f59e0b'; // Laranja suave
+            else if (data.status === 'confirmed') backgroundColor = '#10b981'; // Verde suave
+            else if (data.status === 'attended') backgroundColor = '#3b82f6'; // Azul suave
+            else if (data.status === 'absent') backgroundColor = '#ef4444'; // Vermelho suave
+            else if (data.status === 'cancelled') backgroundColor = '#6b7280'; // Cinza suave
             
             events.push({
                 id: doc.id,
@@ -1357,9 +1359,11 @@ async function loadCalendarEvents(fetchInfo, successCallback, failureCallback) {
                 const serviceName = await getServiceName(data.serviceId);
                 const professionalName = await getProfessionalName(data.professionalId);
                 
-                let backgroundColor = '#D91828';
-                if (data.status === 'pending') backgroundColor = '#D91414';
-                else if (data.status === 'attended') backgroundColor = '#22c55e';
+                // NOVAS CORES MAIS HARMONIOSAS (fallback)
+                let backgroundColor = '#4f46e5';
+                if (data.status === 'pending') backgroundColor = '#f59e0b';
+                else if (data.status === 'confirmed') backgroundColor = '#10b981';
+                else if (data.status === 'attended') backgroundColor = '#3b82f6';
                 else if (data.status === 'absent') backgroundColor = '#ef4444';
                 else if (data.status === 'cancelled') backgroundColor = '#6b7280';
                 
@@ -1408,8 +1412,8 @@ function showAppointmentDetails(event) {
         statusBg = '#10b98120';
     } else if (props.status === 'attended') {
         statusText = '✅ Compareceu';
-        statusColor = '#22c55e';
-        statusBg = '#22c55e20';
+        statusColor = '#3b82f6';
+        statusBg = '#3b82f620';
     } else if (props.status === 'absent') {
         statusText = '❌ Faltou';
         statusColor = '#ef4444';
@@ -1427,33 +1431,33 @@ function showAppointmentDetails(event) {
     const detailsHTML = `
         <div class="modal" id="appointmentDetailsModal" style="display: flex;">
             <div class="modal-content" style="max-width: 500px;">
-                <h2 style="margin-bottom: 20px; color: var(--nexbook-primary);">
+                <h2 style="margin-bottom: 20px; color: #4f46e5;">
                     <i class="fas fa-calendar-check"></i> Detalhes do Agendamento
                 </h2>
                 
                 <div style="margin-bottom: 20px;">
-                    <div style="background: var(--bg-tertiary); padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+                    <div style="background: #f3f4f6; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
                         <div style="display: flex; align-items: center;">
-                            <div style="width: 40px; height: 40px; background: var(--nexbook-gradient); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #4f46e5, #818cf8); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
                                 <i class="fas fa-user" style="color: white;"></i>
                             </div>
                             <div>
-                                <div style="font-size: 12px; color: var(--text-tertiary);">Cliente</div>
+                                <div style="font-size: 12px; color: #6b7280;">Cliente</div>
                                 <div style="font-size: 18px; font-weight: 600;">${props.clientName}</div>
                             </div>
                         </div>
                     </div>
                     
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-                        <div style="background: var(--bg-tertiary); padding: 12px; border-radius: 12px;">
-                            <div style="font-size: 12px; color: var(--text-tertiary); margin-bottom: 5px;">
+                        <div style="background: #f3f4f6; padding: 12px; border-radius: 12px;">
+                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">
                                 <i class="fas fa-cut"></i> Serviço
                             </div>
                             <div style="font-weight: 600;">${props.serviceName}</div>
                         </div>
                         
-                        <div style="background: var(--bg-tertiary); padding: 12px; border-radius: 12px;">
-                            <div style="font-size: 12px; color: var(--text-tertiary); margin-bottom: 5px;">
+                        <div style="background: #f3f4f6; padding: 12px; border-radius: 12px;">
+                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">
                                 <i class="fas fa-user-md"></i> Profissional
                             </div>
                             <div style="font-weight: 600;">${props.professionalName}</div>
@@ -1461,15 +1465,15 @@ function showAppointmentDetails(event) {
                     </div>
                     
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-                        <div style="background: var(--bg-tertiary); padding: 12px; border-radius: 12px;">
-                            <div style="font-size: 12px; color: var(--text-tertiary); margin-bottom: 5px;">
+                        <div style="background: #f3f4f6; padding: 12px; border-radius: 12px;">
+                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">
                                 <i class="fas fa-clock"></i> Horário
                             </div>
                             <div style="font-weight: 600;">${startTime} às ${endTime}</div>
                         </div>
                         
-                        <div style="background: var(--bg-tertiary); padding: 12px; border-radius: 12px;">
-                            <div style="font-size: 12px; color: var(--text-tertiary); margin-bottom: 5px;">
+                        <div style="background: #f3f4f6; padding: 12px; border-radius: 12px;">
+                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">
                                 <i class="fas fa-dollar-sign"></i> Valor
                             </div>
                             <div style="font-weight: 600;">${formatCurrency(props.servicePrice)}</div>
@@ -1477,15 +1481,15 @@ function showAppointmentDetails(event) {
                     </div>
                     
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-                        <div style="background: var(--bg-tertiary); padding: 12px; border-radius: 12px;">
-                            <div style="font-size: 12px; color: var(--text-tertiary); margin-bottom: 5px;">
+                        <div style="background: #f3f4f6; padding: 12px; border-radius: 12px;">
+                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">
                                 <i class="fas fa-hourglass-half"></i> Duração
                             </div>
                             <div style="font-weight: 600;">${props.serviceDuration} minutos</div>
                         </div>
                         
-                        <div style="background: var(--bg-tertiary); padding: 12px; border-radius: 12px;">
-                            <div style="font-size: 12px; color: var(--text-tertiary); margin-bottom: 5px;">
+                        <div style="background: #f3f4f6; padding: 12px; border-radius: 12px;">
+                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">
                                 <i class="fas fa-tag"></i> Status
                             </div>
                             <div>
@@ -1497,16 +1501,16 @@ function showAppointmentDetails(event) {
                     </div>
                     
                     ${props.notes ? `
-                        <div style="background: var(--bg-tertiary); padding: 12px; border-radius: 12px; margin-bottom: 15px;">
-                            <div style="font-size: 12px; color: var(--text-tertiary); margin-bottom: 5px;">
+                        <div style="background: #f3f4f6; padding: 12px; border-radius: 12px; margin-bottom: 15px;">
+                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">
                                 <i class="fas fa-comment"></i> Observações
                             </div>
                             <div>${props.notes}</div>
                         </div>
                     ` : ''}
                     
-                    <div style="background: var(--bg-tertiary); padding: 12px; border-radius: 12px;">
-                        <div style="font-size: 12px; color: var(--text-tertiary); margin-bottom: 5px;">
+                    <div style="background: #f3f4f6; padding: 12px; border-radius: 12px;">
+                        <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">
                             <i class="fas fa-calendar-day"></i> Data
                         </div>
                         <div style="font-weight: 600;">${new Date(props.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
@@ -1745,7 +1749,7 @@ function getClientModalFields(origin = 'Direto') {
                         <i class="fas fa-images"></i> Galeria
                     </button>
                 </div>
-                <div class="photo-optional" style="color: var(--text-tertiary); font-size: 11px; margin-top: 5px; text-align: center;">
+                <div class="photo-optional" style="color: #6b7280; font-size: 11px; margin-top: 5px; text-align: center;">
                     <i class="fas fa-info-circle"></i> Foto opcional (máx. 10MB)
                 </div>
             </div>
@@ -1764,7 +1768,7 @@ function getClientModalFields(origin = 'Direto') {
         <div class="form-group">
             <label>Data de Nascimento *</label>
             <input type="date" id="modalBirthDate" class="form-control" required max="${today}">
-            <small style="color: var(--text-tertiary);">Formato: DD/MM/AAAA</small>
+            <small style="color: #6b7280;">Formato: DD/MM/AAAA</small>
         </div>
         
         <div class="form-group">
@@ -2107,7 +2111,7 @@ function editItem(type, id) {
                                 <i class="fas fa-images"></i> Galeria
                             </button>
                         </div>
-                        <div class="photo-optional" style="color: var(--text-tertiary); font-size: 11px; margin-top: 5px; text-align: center;">
+                        <div class="photo-optional" style="color: #6b7280; font-size: 11px; margin-top: 5px; text-align: center;">
                             <i class="fas fa-info-circle"></i> Foto opcional (máx. 10MB)
                         </div>
                     </div>
@@ -2504,7 +2508,7 @@ function applyFilters() {
 }
 
 // ============================================
-// CSS DO CALENDÁRIO
+// CSS DO CALENDÁRIO COM NOVAS CORES
 // ============================================
 function addCalendarStyles() {
     if (document.getElementById('calendar-styles')) return;
@@ -2514,10 +2518,14 @@ function addCalendarStyles() {
     styleSheet.textContent = `
         .fc {
             font-family: 'Google Sans', 'Roboto', system-ui, sans-serif;
-            background: var(--bg-primary);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+        
+        .dark-theme .fc {
+            background: #1f2937;
         }
         
         .fc-toolbar {
@@ -2526,14 +2534,18 @@ function addCalendarStyles() {
         
         .fc-toolbar-title {
             font-size: 1.5rem !important;
-            font-weight: 500 !important;
-            color: var(--text-primary);
+            font-weight: 600 !important;
+            color: #111827;
+        }
+        
+        .dark-theme .fc-toolbar-title {
+            color: #f3f4f6;
         }
         
         .fc-button {
             background: transparent !important;
-            border: 1px solid var(--border-color) !important;
-            color: var(--text-primary) !important;
+            border: 1px solid #e5e7eb !important;
+            color: #374151 !important;
             font-weight: 500 !important;
             padding: 8px 16px !important;
             border-radius: 24px !important;
@@ -2542,50 +2554,76 @@ function addCalendarStyles() {
             box-shadow: none !important;
         }
         
+        .dark-theme .fc-button {
+            border-color: #4b5563 !important;
+            color: #f3f4f6 !important;
+        }
+        
         .fc-button:hover {
-            background: var(--bg-hover) !important;
-            border-color: var(--nexbook-primary) !important;
+            background: #f3f4f6 !important;
+            border-color: #4f46e5 !important;
+        }
+        
+        .dark-theme .fc-button:hover {
+            background: #374151 !important;
         }
         
         .fc-button-active {
-            background: var(--nexbook-primary) !important;
-            border-color: var(--nexbook-primary) !important;
+            background: #4f46e5 !important;
+            border-color: #4f46e5 !important;
             color: white !important;
         }
         
         .fc-button-active:hover {
-            background: var(--nexbook-secondary) !important;
+            background: #6366f1 !important;
         }
         
         .fc-col-header-cell {
-            background: var(--bg-secondary);
-            padding: 12px 0;
-            font-weight: 500;
-            color: var(--text-primary);
+            background: #f9fafb;
+            padding: 14px 0;
+            font-weight: 600;
+            color: #374151;
             border: none;
+        }
+        
+        .dark-theme .fc-col-header-cell {
+            background: #111827;
+            color: #f3f4f6;
         }
         
         .fc-col-header-cell-cushion {
             text-decoration: none;
-            color: var(--text-primary);
+            color: inherit;
         }
         
         .fc-daygrid-day {
-            border: 1px solid var(--border-color) !important;
+            border: 1px solid #f3f4f6 !important;
             transition: background 0.2s;
         }
         
+        .dark-theme .fc-daygrid-day {
+            border-color: #374151 !important;
+        }
+        
         .fc-daygrid-day:hover {
-            background: var(--bg-hover);
+            background: #f9fafb;
             cursor: pointer;
         }
         
+        .dark-theme .fc-daygrid-day:hover {
+            background: #1f2937;
+        }
+        
         .fc-day-today {
-            background: rgba(217, 24, 40, 0.05) !important;
+            background: rgba(79, 70, 229, 0.05) !important;
+        }
+        
+        .dark-theme .fc-day-today {
+            background: rgba(79, 70, 229, 0.1) !important;
         }
         
         .fc-day-today .fc-daygrid-day-number {
-            background: var(--nexbook-primary);
+            background: #4f46e5;
             color: white !important;
             width: 28px;
             height: 28px;
@@ -2597,92 +2635,119 @@ function addCalendarStyles() {
         }
         
         .fc-daygrid-day-number {
-            color: var(--text-primary);
+            color: #374151;
             text-decoration: none;
             font-size: 14px;
             font-weight: 500;
             padding: 8px !important;
         }
         
+        .dark-theme .fc-daygrid-day-number {
+            color: #f3f4f6;
+        }
+        
         .fc-event {
             border: none !important;
-            border-radius: 4px !important;
-            padding: 2px 4px !important;
+            border-radius: 6px !important;
+            padding: 4px 6px !important;
             font-size: 12px !important;
             cursor: pointer !important;
-            margin: 1px 0 !important;
+            margin: 2px 0 !important;
             transition: transform 0.1s, box-shadow 0.1s;
+            font-weight: 500;
         }
         
         .fc-event:hover {
             transform: scale(1.02);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        }
-        
-        .event-status-confirmed {
-            background: linear-gradient(135deg, #D91828, #8C0D0D) !important;
-        }
-        
-        .event-status-attended {
-            background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
         
         .event-status-pending {
-            background: linear-gradient(135deg, #D91414, #591218) !important;
+            background: linear-gradient(135deg, #f59e0b, #fbbf24) !important;
+        }
+        
+        .event-status-confirmed {
+            background: linear-gradient(135deg, #10b981, #34d399) !important;
+        }
+        
+        .event-status-attended {
+            background: linear-gradient(135deg, #3b82f6, #60a5fa) !important;
         }
         
         .event-status-absent {
-            background: linear-gradient(135deg, #ef4444, #b91c1c) !important;
+            background: linear-gradient(135deg, #ef4444, #f87171) !important;
         }
         
         .event-status-cancelled {
-            background: linear-gradient(135deg, #6b7280, #4b5563) !important;
+            background: linear-gradient(135deg, #6b7280, #9ca3af) !important;
         }
         
         .fc-timegrid-slot {
             height: 40px !important;
-            border-color: var(--border-color) !important;
+            border-color: #f3f4f6 !important;
+        }
+        
+        .dark-theme .fc-timegrid-slot {
+            border-color: #374151 !important;
         }
         
         .fc-timegrid-slot-label {
             font-size: 12px;
-            color: var(--text-tertiary);
+            color: #6b7280;
             font-weight: 500;
         }
         
+        .dark-theme .fc-timegrid-slot-label {
+            color: #9ca3af;
+        }
+        
         .fc-timegrid-now-indicator-line {
-            border-color: var(--nexbook-primary) !important;
+            border-color: #4f46e5 !important;
             border-width: 2px !important;
         }
         
         .fc-timegrid-now-indicator-arrow {
-            border-color: var(--nexbook-primary) !important;
-            color: var(--nexbook-primary) !important;
+            border-color: #4f46e5 !important;
+            color: #4f46e5 !important;
         }
         
         .fc-scrollgrid {
-            border: 1px solid var(--border-color) !important;
-            border-radius: 8px;
+            border: 1px solid #f3f4f6 !important;
+            border-radius: 12px;
             overflow: hidden;
         }
         
+        .dark-theme .fc-scrollgrid {
+            border-color: #374151 !important;
+        }
+        
         .fc-scrollgrid td {
-            border-color: var(--border-color) !important;
+            border-color: #f3f4f6 !important;
+        }
+        
+        .dark-theme .fc-scrollgrid td {
+            border-color: #374151 !important;
         }
         
         .event-tooltip {
             position: fixed;
-            background: var(--bg-primary);
-            color: var(--text-primary);
+            background: #ffffff;
+            color: #111827;
             padding: 12px;
             border-radius: 8px;
             font-size: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            border: 1px solid #e5e7eb;
             z-index: 9999;
             pointer-events: none;
             max-width: 250px;
             animation: fadeIn 0.2s;
+        }
+        
+        .dark-theme .event-tooltip {
+            background: #1f2937;
+            color: #f3f4f6;
+            border-color: #4b5563;
         }
         
         .event-tooltip::after {
@@ -2693,10 +2758,15 @@ function addCalendarStyles() {
             transform: translateX(-50%);
             width: 10px;
             height: 10px;
-            background: var(--bg-primary);
-            border-right: 1px solid var(--border-color);
-            border-bottom: 1px solid var(--border-color);
+            background: #ffffff;
+            border-right: 1px solid #e5e7eb;
+            border-bottom: 1px solid #e5e7eb;
             transform: translateX(-50%) rotate(45deg);
+        }
+        
+        .dark-theme .event-tooltip::after {
+            background: #1f2937;
+            border-color: #4b5563;
         }
         
         @keyframes fadeIn {
@@ -2708,11 +2778,11 @@ function addCalendarStyles() {
             position: fixed;
             bottom: 24px;
             right: 24px;
-            background: var(--bg-primary);
-            color: var(--text-primary);
+            background: #ffffff;
+            color: #111827;
             padding: 16px 24px;
             border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             display: flex;
             align-items: center;
             gap: 12px;
@@ -2720,7 +2790,12 @@ function addCalendarStyles() {
             opacity: 0;
             transition: all 0.3s;
             z-index: 10000;
-            border-left: 4px solid var(--nexbook-primary);
+            border-left: 4px solid #4f46e5;
+        }
+        
+        .dark-theme .google-notification {
+            background: #1f2937;
+            color: #f3f4f6;
         }
         
         .google-notification.show {
@@ -2729,7 +2804,7 @@ function addCalendarStyles() {
         }
         
         .google-notification.success {
-            border-left-color: #22c55e;
+            border-left-color: #10b981;
         }
         
         .google-notification.error {
@@ -2759,6 +2834,10 @@ function addCalendarStyles() {
             
             .fc-daygrid-day-number {
                 font-size: 12px;
+            }
+            
+            .fc {
+                padding: 16px;
             }
         }
     `;
@@ -3018,8 +3097,8 @@ function updateReportsCharts(appointments, clients) {
             reportsPieChart.updateOptions({
                 labels: originLabels,
                 colors: originLabels.map(label => 
-                    label === 'Total Pass' ? '#D91828' : 
-                    label === 'Well Hub' ? '#8C0D0D' : '#591218'
+                    label === 'Total Pass' ? '#4f46e5' : 
+                    label === 'Well Hub' ? '#10b981' : '#f59e0b'
                 )
             });
             reportsPieChart.updateSeries(originData);
@@ -3153,7 +3232,7 @@ async function updateReportClientsList(clients, appointments) {
         
     } catch (error) {
         console.error('❌ Erro ao atualizar lista de clientes:', error);
-        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 20px; color: var(--danger);">Erro ao carregar dados</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 20px; color: #ef4444;">Erro ao carregar dados</td></tr>';
     }
 }
 
@@ -3327,7 +3406,7 @@ async function generateClientReport(clientId) {
                 width: '100%'
             },
             labels: ['Compareceu', 'Faltou', 'Pendente'],
-            colors: ['#22c55e', '#ef4444', '#f59e0b'],
+            colors: ['#10b981', '#ef4444', '#f59e0b'],
             legend: {
                 position: 'bottom',
                 fontSize: '12px'
@@ -3376,7 +3455,7 @@ async function generateGeneralReport() {
         const doc = new jsPDF('landscape');
         
         doc.setFontSize(18);
-        doc.setTextColor(217, 24, 40);
+        doc.setTextColor(79, 70, 229);
         doc.text('RELATÓRIO GERAL NEXBOOK', 14, 20);
         
         doc.setFontSize(11);
@@ -3478,7 +3557,7 @@ async function generateGeneralReport() {
             body: tableRows,
             theme: 'grid',
             styles: { fontSize: 8 },
-            headStyles: { fillColor: [217, 24, 40] }
+            headStyles: { fillColor: [79, 70, 229] }
         });
         
         doc.save(`relatorio-geral-${new Date().toISOString().split('T')[0]}.pdf`);
@@ -3590,7 +3669,7 @@ document.addEventListener('DOMContentLoaded', function() {
             stacked: false,
             background: 'transparent'
         },
-        colors: ['#22c55e', '#ef4444'],
+        colors: ['#10b981', '#ef4444'],
         dataLabels: { enabled: false },
         stroke: { 
             curve: 'smooth', 
@@ -3667,7 +3746,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 shade: 'dark',
                 type: 'vertical',
                 shadeIntensity: 0.5,
-                gradientToColors: ['#16a34a', '#b91c1c'],
+                gradientToColors: ['#059669', '#b91c1c'],
                 inverseColors: true,
                 opacityFrom: 1,
                 opacityTo: 0.9,
@@ -3686,7 +3765,7 @@ document.addEventListener('DOMContentLoaded', function() {
             background: 'transparent',
             sparkline: { enabled: false }
         },
-        colors: ['#D91828', '#D91414', '#8C0D0D', '#591218'],
+        colors: ['#4f46e5', '#10b981', '#f59e0b', '#ef4444'],
         labels: ['MENSAL', 'TRIMESTRAL', 'SEMESTRAL', 'ANUAL'],
         plotOptions: { 
             pie: { 
@@ -3707,7 +3786,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             fontSize: '16px',
                             fontFamily: 'Plus Jakarta Sans, sans-serif',
                             fontWeight: 700,
-                            color: 'var(--nexbook-primary)',
+                            color: '#4f46e5',
                             offsetY: 10,
                             formatter: function(val) {
                                 return val + ' cliente' + (parseInt(val) !== 1 ? 's' : '');
@@ -3849,7 +3928,7 @@ document.addEventListener('DOMContentLoaded', function() {
     reportsLineChart = new ApexCharts(document.querySelector("#reportsLineChart"), {
         series: [{ name: 'Agendamentos', data: [] }],
         chart: { type: 'line', height: 250, toolbar: { show: false } },
-        colors: ['#D91828'],
+        colors: ['#4f46e5'],
         stroke: { curve: 'smooth', width: 3 },
         xaxis: { categories: [] }
     });
@@ -3859,14 +3938,14 @@ document.addEventListener('DOMContentLoaded', function() {
         series: [],
         chart: { type: 'pie', height: 250 },
         labels: [],
-        colors: ['#D91828', '#8C0D0D', '#591218']
+        colors: ['#4f46e5', '#10b981', '#f59e0b']
     });
     reportsPieChart.render();
     
     reportsBarChart = new ApexCharts(document.querySelector("#reportsBarChart"), {
         series: [{ name: 'Agendamentos', data: [] }],
         chart: { type: 'bar', height: 250, toolbar: { show: false } },
-        colors: ['#D91414'],
+        colors: ['#10b981'],
         plotOptions: { bar: { borderRadius: 4, horizontal: true } },
         xaxis: { categories: [] }
     });
