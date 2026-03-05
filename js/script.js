@@ -182,7 +182,8 @@ function filterClientsTable() {
             const telefone = row.cells[5]?.textContent.toLowerCase() || '';
             const plano = row.cells[6]?.textContent.toLowerCase() || '';
             const origem = row.cells[7]?.textContent.toLowerCase() || '';
-            const cidade = row.cells[9]?.textContent.toLowerCase() || '';
+            const startDate = row.cells[9]?.textContent.toLowerCase() || '';
+            const cidade = row.cells[10]?.textContent.toLowerCase() || '';
             
             const matches = nome.includes(globalSearchTerm) || 
                            cpf.includes(globalSearchTerm) || 
@@ -190,6 +191,7 @@ function filterClientsTable() {
                            telefone.includes(globalSearchTerm) ||
                            plano.includes(globalSearchTerm) ||
                            origem.includes(globalSearchTerm) ||
+                           startDate.includes(globalSearchTerm) ||
                            cidade.includes(globalSearchTerm);
             
             row.style.display = matches ? '' : 'none';
@@ -201,7 +203,7 @@ function filterClientsTable() {
     if (visibleCount === 0 && rows.length > 0) {
         const noResultsRow = document.createElement('tr');
         noResultsRow.id = 'noResultsRow';
-        noResultsRow.innerHTML = '<td colspan="12" style="text-align: center; padding: 20px;">Nenhum cliente encontrado com o termo "' + globalSearchTerm + '"</td>';
+        noResultsRow.innerHTML = '<td colspan="13" style="text-align: center; padding: 20px;">Nenhum cliente encontrado com o termo "' + globalSearchTerm + '"</td>';
         
         const oldNoResults = document.getElementById('noResultsRow');
         if (oldNoResults) oldNoResults.remove();
@@ -566,7 +568,7 @@ async function loadServices() {
 }
 
 // ============================================
-// FUNÇÃO LOADCLIENTS
+// FUNÇÃO LOADCLIENTS - CORRIGIDA COM DATA DE INÍCIO
 // ============================================
 async function loadClients() {
     try {
@@ -590,7 +592,7 @@ async function loadClients() {
         const tbody = document.getElementById('clientsList');
         if (tbody) {
             if (clients.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="12" style="text-align: center;">Nenhum cliente cadastrado</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="13" style="text-align: center;">Nenhum cliente cadastrado</td></tr>';
             } else {
                 tbody.innerHTML = clients.map(c => {
                     const cpfFormatado = c.cpf ? c.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : '---';
@@ -610,6 +612,12 @@ async function loadClients() {
                         dataNascimentoFormatada = `${dia}/${mes}/${ano}`;
                     }
                     
+                    let dataInicioFormatada = '---';
+                    if (c.startDate) {
+                        const [ano, mes, dia] = c.startDate.split('-');
+                        dataInicioFormatada = `${dia}/${mes}/${ano}`;
+                    }
+                    
                     return `
                     <tr>
                         <td data-label="Foto">${fotoHtml}</td>
@@ -621,6 +629,7 @@ async function loadClients() {
                         <td data-label="Plano">${c.plan || '---'}</td>
                         <td data-label="Origem"><span class="badge ${origemClass}">${origem}</span></td>
                         <td data-label="Valor">${valorPlano}</td>
+                        <td data-label="Data Início"><span class="start-date-badge"><i class="fas fa-calendar-alt"></i> ${dataInicioFormatada}</span></td>
                         <td data-label="Cidade">${c.city || '---'}</td>
                         <td data-label="Status"><span class="badge ${c.status === 'active' ? 'active' : 'inactive'}">${c.status === 'active' ? 'Ativo' : 'Inativo'}</span></td>
                         <td data-label="Ações">
@@ -1356,7 +1365,7 @@ async function loadCalendarEvents(fetchInfo, successCallback, failureCallback) {
                 
                 events.push({
                     id: doc.id,
-                    title: `${data.time || '09:00'} - ${clientName}`,
+                    title: clientName,
                     start: data.date + 'T' + (data.time || '09:00') + ':00',
                     end: data.date + 'T' + (await calculateEndTime(data.time, data.serviceId) || '10:00') + ':00',
                     backgroundColor: backgroundColor,
@@ -1595,7 +1604,7 @@ function handlePhotoSelect(event) {
 }
 
 // ============================================
-// FUNÇÕES DO MODAL - CORRIGIDAS
+// FUNÇÕES DO MODAL - CORRIGIDAS COM DATA DE INÍCIO
 // ============================================
 function openModal(type, date = null, time = null) {
     currentModalType = type;
@@ -1720,6 +1729,8 @@ function openModal(type, date = null, time = null) {
 }
 
 function getClientModalFields(origin = 'Direto') {
+    const today = new Date().toISOString().split('T')[0];
+    
     return `
         <div class="photo-upload-container">
             <div class="photo-preview" id="photoPreview">
@@ -1752,7 +1763,7 @@ function getClientModalFields(origin = 'Direto') {
         
         <div class="form-group">
             <label>Data de Nascimento *</label>
-            <input type="date" id="modalBirthDate" class="form-control" required max="${new Date().toISOString().split('T')[0]}">
+            <input type="date" id="modalBirthDate" class="form-control" required max="${today}">
             <small style="color: var(--text-tertiary);">Formato: DD/MM/AAAA</small>
         </div>
         
@@ -1780,6 +1791,12 @@ function getClientModalFields(origin = 'Direto') {
         <div class="form-group">
             <label>Valor do Plano (R$) *</label>
             <input type="text" id="modalPlanValue" class="form-control" required placeholder="0,00" onkeyup="mascaraMoeda(this)" value="0,00">
+        </div>
+        
+        <div class="form-group">
+            <label>Data de Início *</label>
+            <input type="date" id="modalStartDate" class="form-control" required value="${today}" max="${today}">
+            <small class="field-hint"><i class="fas fa-calendar-alt"></i> Data em que o cliente iniciou as aulas</small>
         </div>
         
         <input type="hidden" id="modalOrigin" value="${origin}">
@@ -1947,7 +1964,7 @@ async function buscarCep() {
 }
 
 // ============================================
-// FUNÇÃO EDITITEM
+// FUNÇÃO EDITITEM - CORRIGIDA COM DATA DE INÍCIO
 // ============================================
 function editItem(type, id) {
     currentModalType = type;
@@ -2074,6 +2091,8 @@ function editItem(type, id) {
                 photoHtml = `<img src="${data.photoBase64}" alt="Foto">`;
             }
             
+            const today = new Date().toISOString().split('T')[0];
+            
             fields.innerHTML = `
                 <div class="photo-upload-container">
                     <div class="photo-preview" id="photoPreview">
@@ -2106,7 +2125,7 @@ function editItem(type, id) {
                 
                 <div class="form-group">
                     <label>Data de Nascimento *</label>
-                    <input type="date" id="modalBirthDate" class="form-control" value="${data.birthDate || ''}" required max="${new Date().toISOString().split('T')[0]}">
+                    <input type="date" id="modalBirthDate" class="form-control" value="${data.birthDate || ''}" required max="${today}">
                 </div>
                 
                 <div class="form-group">
@@ -2133,6 +2152,12 @@ function editItem(type, id) {
                 <div class="form-group">
                     <label>Valor do Plano (R$) *</label>
                     <input type="text" id="modalPlanValue" class="form-control" required value="${valorFormatado}" onkeyup="mascaraMoeda(this)">
+                </div>
+                
+                <div class="form-group">
+                    <label>Data de Início *</label>
+                    <input type="date" id="modalStartDate" class="form-control" required value="${data.startDate || today}" max="${today}">
+                    <small class="field-hint"><i class="fas fa-calendar-alt"></i> Data em que o cliente iniciou as aulas</small>
                 </div>
                 
                 <input type="hidden" id="modalOrigin" value="${data.origin || 'Direto'}">
@@ -2174,7 +2199,7 @@ function editItem(type, id) {
 }
 
 // ============================================
-// FUNÇÃO SAVEMODAL
+// FUNÇÃO SAVEMODAL - CORRIGIDA COM DATA DE INÍCIO
 // ============================================
 async function saveModal() {
     if (!currentModalType || !currentUserId) return;
@@ -2245,10 +2270,20 @@ async function saveModal() {
             const birthDateInput = document.getElementById('modalBirthDate');
             const planInput = document.getElementById('modalPlan');
             const planValueInput = document.getElementById('modalPlanValue');
+            const startDateInput = document.getElementById('modalStartDate');
             const originInput = document.getElementById('modalOrigin');
             
-            if (!cpfInput || !phoneInput || !nameInput || !birthDateInput || !planInput || !planValueInput) {
-                throw new Error('Erro ao capturar dados do formulário');
+            if (!cpfInput || !phoneInput || !nameInput || !birthDateInput || !planInput || !planValueInput || !startDateInput) {
+                console.error('Campos do formulário não encontrados:', {
+                    cpf: !!cpfInput,
+                    phone: !!phoneInput,
+                    name: !!nameInput,
+                    birthDate: !!birthDateInput,
+                    plan: !!planInput,
+                    planValue: !!planValueInput,
+                    startDate: !!startDateInput
+                });
+                throw new Error('Erro ao capturar dados do formulário. Campos não encontrados.');
             }
             
             const cpfRaw = cpfInput.value.replace(/\D/g, '');
@@ -2256,6 +2291,7 @@ async function saveModal() {
             const name = nameInput.value.trim();
             const birthDate = birthDateInput.value;
             const plan = planInput.value;
+            const startDate = startDateInput.value;
             const origin = originInput ? originInput.value : (type === 'totalpass' ? 'Total Pass' : (type === 'wellhub' ? 'Well Hub' : 'Direto'));
             
             let planValue = 0;
@@ -2287,6 +2323,10 @@ async function saveModal() {
                 throw new Error('Valor do plano inválido');
             }
             
+            if (!startDate) {
+                throw new Error('Data de início é obrigatória');
+            }
+            
             data = {
                 userId: currentUserId,
                 name: name,
@@ -2296,6 +2336,7 @@ async function saveModal() {
                 phone: phoneRaw,
                 plan: plan,
                 planValue: planValue,
+                startDate: startDate,
                 origin: origin,
                 address: document.getElementById('modalAddress')?.value || '',
                 cep: document.getElementById('modalCep')?.value || '',
@@ -3040,14 +3081,14 @@ function updateReportsCharts(appointments, clients) {
 }
 
 // ============================================
-// ATUALIZAR LISTA DE CLIENTES NO RELATÓRIO
+// ATUALIZAR LISTA DE CLIENTES NO RELATÓRIO - CORRIGIDA COM DATA DE INÍCIO
 // ============================================
 async function updateReportClientsList(clients, appointments) {
     const tbody = document.getElementById('reportClientsList');
     if (!tbody) return;
     
     if (clients.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px;">Nenhum cliente encontrado</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 20px;">Nenhum cliente encontrado</td></tr>';
         return;
     }
     
@@ -3082,11 +3123,18 @@ async function updateReportClientsList(clients, appointments) {
             const origemClass = client.origin === 'Total Pass' ? 'badge-totalpass' : 
                                (client.origin === 'Well Hub' ? 'badge-wellhub' : '');
             
+            let dataInicioFormatada = '---';
+            if (client.startDate) {
+                const [ano, mes, dia] = client.startDate.split('-');
+                dataInicioFormatada = `${dia}/${mes}/${ano}`;
+            }
+            
             return `
                 <tr>
                     <td data-label="Nome">${client.name || '---'}</td>
                     <td data-label="Plano">${client.plan || '---'}</td>
                     <td data-label="Origem"><span class="badge ${origemClass}">${client.origin || 'Direto'}</span></td>
+                    <td data-label="Data Início"><span class="start-date-badge"><i class="fas fa-calendar-alt"></i> ${dataInicioFormatada}</span></td>
                     <td data-label="Agendamentos">${total}</td>
                     <td data-label="Comparecimentos">${attended}</td>
                     <td data-label="Faltas">${absent}</td>
@@ -3105,12 +3153,12 @@ async function updateReportClientsList(clients, appointments) {
         
     } catch (error) {
         console.error('❌ Erro ao atualizar lista de clientes:', error);
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px; color: var(--danger);">Erro ao carregar dados</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 20px; color: var(--danger);">Erro ao carregar dados</td></tr>';
     }
 }
 
 // ============================================
-// GERAR RELATÓRIO INDIVIDUAL DO ALUNO
+// GERAR RELATÓRIO INDIVIDUAL DO ALUNO - CORRIGIDA COM DATA DE INÍCIO
 // ============================================
 async function generateClientReport(clientId) {
     try {
@@ -3165,6 +3213,12 @@ async function generateClientReport(clientId) {
             `<img src="${client.photoBase64}" alt="${client.name}">` : 
             `<span>${initials}</span>`;
         
+        let dataInicioFormatada = 'Não informado';
+        if (client.startDate) {
+            const [ano, mes, dia] = client.startDate.split('-');
+            dataInicioFormatada = `${dia}/${mes}/${ano}`;
+        }
+        
         content.innerHTML = `
             <div class="client-report-content">
                 <div class="client-report-header">
@@ -3176,6 +3230,7 @@ async function generateClientReport(clientId) {
                         <p><i class="fas fa-envelope"></i> ${client.email || 'Não informado'}</p>
                         <p><i class="fas fa-phone"></i> ${client.phone || 'Não informado'}</p>
                         <p><i class="fas fa-id-card"></i> CPF: ${client.cpf ? client.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : 'Não informado'}</p>
+                        <p><i class="fas fa-calendar-alt"></i> Data de Início: ${dataInicioFormatada}</p>
                     </div>
                 </div>
                 
@@ -3313,7 +3368,7 @@ function closeClientReportModal() {
 }
 
 // ============================================
-// GERAR RELATÓRIO GERAL EM PDF
+// GERAR RELATÓRIO GERAL EM PDF - CORRIGIDA COM DATA DE INÍCIO
 // ============================================
 async function generateGeneralReport() {
     try {
@@ -3391,7 +3446,7 @@ async function generateGeneralReport() {
         
         doc.text('LISTA DE CLIENTES', 14, 90);
         
-        const tableColumn = ['Nome', 'CPF', 'Telefone', 'Plano', 'Origem', 'Status', 'Valor'];
+        const tableColumn = ['Nome', 'CPF', 'Telefone', 'Plano', 'Origem', 'Data Início', 'Status', 'Valor'];
         const tableRows = [];
         
         clients.slice(0, 20).forEach(client => {
@@ -3399,12 +3454,19 @@ async function generateGeneralReport() {
             const valor = client.planValue ? formatCurrency(client.planValue) : '---';
             const origem = client.origin || 'Direto';
             
+            let dataInicioFormatada = '---';
+            if (client.startDate) {
+                const [ano, mes, dia] = client.startDate.split('-');
+                dataInicioFormatada = `${dia}/${mes}/${ano}`;
+            }
+            
             tableRows.push([
                 client.name || '---',
                 cpfFormatado,
                 client.phone || '---',
                 client.plan || '---',
                 origem,
+                dataInicioFormatada,
                 client.status === 'active' ? 'Ativo' : 'Inativo',
                 valor
             ]);

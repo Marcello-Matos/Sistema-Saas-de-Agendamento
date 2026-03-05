@@ -1184,6 +1184,25 @@ tr:hover td {
     border: 1px solid #2c0b0e;
 }
 
+/* Badge para Data de Início */
+.start-date-badge {
+    background: var(--nexbook-soft);
+    color: var(--nexbook-primary);
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid var(--nexbook-primary)30;
+}
+
+.start-date-badge i {
+    font-size: 10px;
+    color: var(--nexbook-primary);
+}
+
 .table-actions {
     display: flex;
     gap: 8px;
@@ -1740,6 +1759,44 @@ input:checked + .slider:before {
 .form-group textarea:focus {
     border-color: var(--nexbook-primary);
     box-shadow: 0 0 0 3px var(--nexbook-primary)20;
+}
+
+/* Estilo específico para o campo de data */
+.form-group input[type="date"] {
+    color-scheme: var(--date-picker-scheme);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-group input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: var(--date-picker-filter);
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.form-group input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
+body.dark-theme .form-group input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+}
+
+/* Hint para campos opcionais */
+.field-hint {
+    display: block;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-top: 4px;
+    font-style: italic;
+}
+
+.field-hint i {
+    font-size: 10px;
+    margin-right: 4px;
+    color: var(--nexbook-primary);
 }
 
 .row, .row-3 {
