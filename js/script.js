@@ -3756,174 +3756,230 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     appointmentsChart.render();
 
-    servicesChart = new ApexCharts(document.querySelector("#servicesChart"), {
-        series: [],
-        chart: { 
-            type: 'donut', 
-            height: 250,
-            animations: { enabled: true },
-            background: 'transparent',
-            sparkline: { enabled: false }
+    // ============================================
+// GRÁFICO DE DISTRIBUIÇÃO DE PLANOS - VERSÃO PROFISSIONAL
+// ============================================
+servicesChart = new ApexCharts(document.querySelector("#servicesChart"), {
+    series: [],
+    chart: {
+        type: 'donut',
+        height: 320,
+        animations: {
+            enabled: true,
+            easing: 'easeinout',
+            speed: 800,
+            animateGradually: {
+                enabled: true,
+                delay: 150
+            },
+            dynamicAnimation: {
+                enabled: true,
+                speed: 350
+            }
         },
-        colors: ['#4f46e5', '#10b981', '#f59e0b', '#ef4444'],
-        labels: ['MENSAL', 'TRIMESTRAL', 'SEMESTRAL', 'ANUAL'],
-        plotOptions: { 
-            pie: { 
-                donut: { 
-                    size: '65%',
-                    labels: {
+        background: 'transparent',
+        dropShadow: {
+            enabled: true,
+            top: 0,
+            left: 0,
+            blur: 10,
+            color: '#000',
+            opacity: 0.08
+        },
+        events: {
+            dataPointMouseEnter: function(event) {
+                event.target.style.cursor = 'pointer';
+            }
+        }
+    },
+
+    // PALETA DE CORES VIBRANTE E DIFERENCIADA
+    colors: ['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b'],
+
+    labels: ['MENSAL', 'TRIMESTRAL', 'SEMESTRAL', 'ANUAL'],
+
+    plotOptions: {
+        pie: {
+            expandOnClick: true,
+            donut: {
+                size: '72%',
+                background: 'transparent',
+                labels: {
+                    show: true,
+                    name: {
                         show: true,
-                        name: {
-                            show: true,
-                            fontSize: '14px',
-                            fontFamily: 'Plus Jakarta Sans, sans-serif',
-                            fontWeight: 600,
-                            color: 'var(--text-primary)',
-                            offsetY: -10
-                        },
-                        value: {
-                            show: true,
-                            fontSize: '16px',
-                            fontFamily: 'Plus Jakarta Sans, sans-serif',
-                            fontWeight: 700,
-                            color: '#4f46e5',
-                            offsetY: 10,
-                            formatter: function(val) {
-                                return val + ' cliente' + (parseInt(val) !== 1 ? 's' : '');
-                            }
-                        },
-                        total: {
-                            show: true,
-                            showAlways: true,
-                            label: 'Total',
-                            fontSize: '14px',
-                            fontFamily: 'Plus Jakarta Sans, sans-serif',
-                            fontWeight: 600,
-                            color: 'var(--text-tertiary)',
-                            formatter: function(w) {
-                                const total = w.globals.seriesTotals.reduce((a, b) => a + b, 0);
-                                return total + ' cliente' + (total !== 1 ? 's' : '');
-                            }
+                        fontSize: '13px',
+                        fontFamily: 'Plus Jakarta Sans, sans-serif',
+                        fontWeight: 600,
+                        color: 'var(--text-secondary)',
+                        offsetY: -8
+                    },
+                    value: {
+                        show: true,
+                        fontSize: '26px',
+                        fontFamily: 'Plus Jakarta Sans, sans-serif',
+                        fontWeight: 700,
+                        color: 'var(--text-primary)',
+                        offsetY: 8,
+                        formatter: function(val) {
+                            return val;
+                        }
+                    },
+                    total: {
+                        show: true,
+                        showAlways: true,
+                        label: 'Clientes',
+                        fontSize: '13px',
+                        fontFamily: 'Plus Jakarta Sans, sans-serif',
+                        fontWeight: 600,
+                        color: 'var(--text-tertiary)',
+                        formatter: function(w) {
+                            const total = w.globals.seriesTotals.reduce((a, b) => a + b, 0);
+                            return total;
                         }
                     }
-                },
-                expandOnClick: true,
-                dataLabels: {
-                    offset: 0,
-                    minAngleToShowLabel: 10
                 }
-            } 
-        },
-        dataLabels: { 
-            enabled: true,
-            formatter: function(val, opts) {
-                return opts.w.config.series[opts.seriesIndex] + ' (' + val.toFixed(1) + '%)';
             },
-            style: {
-                fontSize: '11px',
-                fontFamily: 'Plus Jakarta Sans, sans-serif',
-                fontWeight: 600,
-                colors: ['#ffffff']
-            },
-            background: {
-                enabled: true,
-                foreColor: '#ffffff',
-                borderRadius: 8,
-                padding: 4,
-                opacity: 0.8,
-                borderWidth: 0
-            },
-            dropShadow: {
-                enabled: true,
-                top: 1,
-                left: 1,
-                blur: 2,
-                color: '#000',
-                opacity: 0.3
+            dataLabels: {
+                offset: -5,
+                minAngleToShowLabel: 15
             }
+        }
+    },
+
+    // RÓTULOS EXTERNOS LIMPOS
+    dataLabels: {
+        enabled: true,
+        formatter: function(val, opts) {
+            if (val < 8) return ''; // Oculta % muito pequenos para não sujar
+            return val.toFixed(1) + '%';
         },
-        legend: { 
-            show: true,
-            position: 'bottom',
-            horizontalAlign: 'center',
+        style: {
             fontSize: '12px',
             fontFamily: 'Plus Jakarta Sans, sans-serif',
-            fontWeight: 500,
-            labels: {
-                colors: 'var(--text-primary)'
+            fontWeight: 700,
+            colors: ['#ffffff']
+        },
+        dropShadow: {
+            enabled: true,
+            top: 1,
+            left: 1,
+            blur: 3,
+            color: '#00000055',
+            opacity: 0.6
+        }
+    },
+
+    // LEGENDA RICA COM ÍCONES E PORCENTAGEM
+    legend: {
+        show: true,
+        position: 'bottom',
+        horizontalAlign: 'center',
+        floating: false,
+        fontSize: '13px',
+        fontFamily: 'Plus Jakarta Sans, sans-serif',
+        fontWeight: 500,
+        offsetY: 4,
+        labels: {
+            colors: 'var(--text-primary)',
+            useSeriesColors: false
+        },
+        markers: {
+            width: 12,
+            height: 12,
+            radius: 6,
+            strokeWidth: 0,
+            offsetY: 1
+        },
+        itemMargin: {
+            horizontal: 14,
+            vertical: 6
+        },
+        formatter: function(seriesName, opts) {
+            const val = opts.w.globals.series[opts.seriesIndex] || 0;
+            return `${seriesName} &nbsp;<strong>${val}</strong>`;
+        }
+    },
+
+    // TOOLTIP PROFISSIONAL
+    tooltip: {
+        enabled: true,
+        theme: document.body.classList.contains('dark-theme') ? 'dark' : 'light',
+        fillSeriesColor: false,
+        style: {
+            fontSize: '13px',
+            fontFamily: 'Plus Jakarta Sans, sans-serif'
+        },
+        y: {
+            formatter: function(val, opts) {
+                const total = opts.w.globals.seriesTotals.reduce((a, b) => a + b, 0);
+                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                return `${val} cliente${val !== 1 ? 's' : ''} (${pct}%)`;
             },
-            markers: {
-                radius: 4,
-                width: 12,
-                height: 12,
-                strokeWidth: 0
-            },
-            itemMargin: {
-                horizontal: 10,
-                vertical: 5
+            title: {
+                formatter: function(seriesName) {
+                    return `Plano ${seriesName}:`;
+                }
+            }
+        }
+    },
+
+    // BORDA ENTRE FATIAS
+    stroke: {
+        show: true,
+        width: 3,
+        colors: ['var(--bg-card)']
+    },
+
+    // ESTADOS DE HOVER / ACTIVE
+    states: {
+        hover: {
+            filter: { type: 'darken', value: 0.08 }
+        },
+        active: {
+            allowMultipleDataPointsSelection: false,
+            filter: { type: 'darken', value: 0.18 }
+        }
+    },
+
+    // RESPONSIVO
+    responsive: [
+        {
+            breakpoint: 1200,
+            options: {
+                chart: { height: 290 },
+                plotOptions: {
+                    pie: { donut: { size: '70%' } }
+                }
             }
         },
-        tooltip: { 
-            theme: 'dark',
-            y: {
-                formatter: function(val) {
-                    return val + ' cliente' + (val !== 1 ? 's' : '');
-                }
-            },
-            style: {
-                fontFamily: 'Plus Jakarta Sans, sans-serif'
-            }
-        },
-        stroke: {
-            show: true,
-            width: 2,
-            colors: ['var(--bg-card)']
-        },
-        states: {
-            hover: {
-                filter: {
-                    type: 'darken',
-                    value: 0.1
-                }
-            },
-            active: {
-                allowMultipleDataPointsSelection: false,
-                filter: {
-                    type: 'darken',
-                    value: 0.2
-                }
-            }
-        },
-        responsive: [{
+        {
             breakpoint: 768,
             options: {
-                chart: {
-                    height: 200
-                },
+                chart: { height: 270 },
                 legend: {
                     position: 'bottom',
-                    fontSize: '11px'
+                    fontSize: '11px',
+                    itemMargin: { horizontal: 8, vertical: 4 }
                 },
                 plotOptions: {
                     pie: {
                         donut: {
-                            size: '70%',
+                            size: '68%',
                             labels: {
-                                show: true,
-                                name: {
-                                    fontSize: '12px'
-                                },
-                                value: {
-                                    fontSize: '14px'
-                                }
+                                value: { fontSize: '20px' },
+                                name:  { fontSize: '11px' }
                             }
                         }
                     }
-                }
+                },
+                dataLabels: { enabled: false }   // Oculta labels externas em telas pequenas
             }
-        }]
-    });
-    servicesChart.render();
+        }
+    ]
+});
+servicesChart.render();
+
     
     reportsLineChart = new ApexCharts(document.querySelector("#reportsLineChart"), {
         series: [{ name: 'Agendamentos', data: [] }],
