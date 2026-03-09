@@ -314,7 +314,7 @@ async function loadDashboardData() {
         
         clientsSnapshot.forEach(doc => {
             const client = doc.data();
-            if (client.planValue && client.planValue > 0) {
+            if (client.planValue && client.planValue > 0 && client.plan !== 'AVULSO') {
                 monthlyRevenue += client.planValue;
                 clientValues.push({
                     name: client.name,
@@ -413,7 +413,7 @@ async function loadDashboardData() {
 }
 
 // ============================================
-// GRÁFICO DE DISTRIBUIÇÃO DE PLANOS
+// GRÁFICO DE DISTRIBUIÇÃO DE PLANOS - CORRIGIDO COM AVULSO
 // ============================================
 function updatePlansChart(clientsSnapshot) {
     if (!servicesChart) return;
@@ -422,13 +422,16 @@ function updatePlansChart(clientsSnapshot) {
         MENSAL: 0,
         TRIMESTRAL: 0,
         SEMESTRAL: 0,
-        ANUAL: 0
+        ANUAL: 0,
+        AVULSO: 0
     };
     
     clientsSnapshot.forEach(doc => {
         const client = doc.data();
         if (client.plan && planCounts.hasOwnProperty(client.plan)) {
             planCounts[client.plan]++;
+        } else if (client.plan === 'AVULSO') {
+            planCounts.AVULSO++;
         }
     });
     
@@ -436,14 +439,15 @@ function updatePlansChart(clientsSnapshot) {
         planCounts.MENSAL,
         planCounts.TRIMESTRAL,
         planCounts.SEMESTRAL,
-        planCounts.ANUAL
+        planCounts.ANUAL,
+        planCounts.AVULSO
     ];
     
-    const planLabels = ['MENSAL', 'TRIMESTRAL', 'SEMESTRAL', 'ANUAL'];
+    const planLabels = ['MENSAL', 'TRIMESTRAL', 'SEMESTRAL', 'ANUAL', 'AVULSO'];
     
     servicesChart.updateOptions({
         labels: planLabels,
-        colors: ['#D91828', '#D91414', '#8C0D0D', '#591218']
+        colors: ['#D91828', '#D91414', '#8C0D0D', '#591218', '#FFA500']
     });
     servicesChart.updateSeries(planData);
     
@@ -568,7 +572,7 @@ async function loadServices() {
 }
 
 // ============================================
-// FUNÇÃO LOADCLIENTS - CORRIGIDA COM DATA DE INÍCIO
+// FUNÇÃO LOADCLIENTS - CORRIGIDA COM PLANO AVULSO
 // ============================================
 async function loadClients() {
     try {
@@ -604,7 +608,7 @@ async function loadClients() {
                     
                     const valorPlano = c.planValue ? formatCurrency(c.planValue) : '---';
                     const origem = c.origin || 'Direto';
-                    const origemClass = origem === 'Total Pass' ? 'badge-totalpass' : (origem === 'Well Hub' ? 'badge-wellhub' : '');
+                    const origemClass = origem === 'Total Pass' ? 'badge-totalpass' : (origem === 'Well Hub' ? 'badge-wellhub' : (c.plan === 'AVULSO' ? 'badge-avulso' : ''));
                     
                     let dataNascimentoFormatada = '---';
                     if (c.birthDate) {
@@ -1608,7 +1612,7 @@ function handlePhotoSelect(event) {
 }
 
 // ============================================
-// FUNÇÕES DO MODAL - CORRIGIDAS COM DATA DE INÍCIO
+// FUNÇÕES DO MODAL - CORRIGIDAS COM PLANO AVULSO
 // ============================================
 function openModal(type, date = null, time = null) {
     currentModalType = type;
@@ -1732,6 +1736,9 @@ function openModal(type, date = null, time = null) {
     modal.style.display = 'flex';
 }
 
+// ============================================
+// FUNÇÃO GETCLIENTMODALFIELDS - CORRIGIDA COM PLANO AVULSO
+// ============================================
 function getClientModalFields(origin = 'Direto') {
     const today = new Date().toISOString().split('T')[0];
     
@@ -1789,6 +1796,7 @@ function getClientModalFields(origin = 'Direto') {
                 <option value="TRIMESTRAL">TRIMESTRAL</option>
                 <option value="SEMESTRAL">SEMESTRAL</option>
                 <option value="ANUAL">ANUAL</option>
+                <option value="AVULSO">AVULSO</option>
             </select>
         </div>
         
@@ -1968,7 +1976,7 @@ async function buscarCep() {
 }
 
 // ============================================
-// FUNÇÃO EDITITEM - CORRIGIDA COM DATA DE INÍCIO
+// FUNÇÃO EDITITEM - CORRIGIDA COM PLANO AVULSO
 // ============================================
 function editItem(type, id) {
     currentModalType = type;
@@ -2150,6 +2158,7 @@ function editItem(type, id) {
                         <option value="TRIMESTRAL" ${data.plan === 'TRIMESTRAL' ? 'selected' : ''}>TRIMESTRAL</option>
                         <option value="SEMESTRAL" ${data.plan === 'SEMESTRAL' ? 'selected' : ''}>SEMESTRAL</option>
                         <option value="ANUAL" ${data.plan === 'ANUAL' ? 'selected' : ''}>ANUAL</option>
+                        <option value="AVULSO" ${data.plan === 'AVULSO' ? 'selected' : ''}>AVULSO</option>
                     </select>
                 </div>
                 
@@ -2203,7 +2212,7 @@ function editItem(type, id) {
 }
 
 // ============================================
-// FUNÇÃO SAVEMODAL - CORRIGIDA COM DATA DE INÍCIO
+// FUNÇÃO SAVEMODAL - CORRIGIDA COM PLANO AVULSO
 // ============================================
 async function saveModal() {
     if (!currentModalType || !currentUserId) return;
@@ -2299,7 +2308,7 @@ async function saveModal() {
             const origin = originInput ? originInput.value : (type === 'totalpass' ? 'Total Pass' : (type === 'wellhub' ? 'Well Hub' : 'Direto'));
             
             let planValue = 0;
-            if (planValueInput.value) {
+            if (planValueInput.value && plan !== 'AVULSO') {
                 planValue = parseFloat(planValueInput.value.replace(/\./g, '').replace(',', '.'));
             }
             
@@ -2323,7 +2332,7 @@ async function saveModal() {
                 throw new Error('Plano é obrigatório');
             }
             
-            if (!planValue || planValue <= 0) {
+            if (plan !== 'AVULSO' && (!planValue || planValue <= 0)) {
                 throw new Error('Valor do plano inválido');
             }
             
@@ -2339,7 +2348,7 @@ async function saveModal() {
                 email: document.getElementById('modalEmail')?.value || '',
                 phone: phoneRaw,
                 plan: plan,
-                planValue: planValue,
+                planValue: plan === 'AVULSO' ? 0 : planValue,
                 startDate: startDate,
                 origin: origin,
                 address: document.getElementById('modalAddress')?.value || '',
@@ -2930,7 +2939,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
 });
 
 // ============================================
-// FUNÇÃO LOADREPORTSDATA - VERSÃO ÚNICA E ROBUSTA
+// FUNÇÃO LOADREPORTSDATA - CORRIGIDA COM PLANO AVULSO
 // ============================================
 async function loadReportsData() {
     try {
@@ -3007,7 +3016,7 @@ async function loadReportsData() {
         }
         
         let revenueFromPlans = 0;
-        clients.filter(c => c.status === 'active').forEach(c => {
+        clients.filter(c => c.status === 'active' && c.plan !== 'AVULSO').forEach(c => {
             if (c.planValue) {
                 revenueFromPlans += c.planValue;
             }
@@ -3042,7 +3051,7 @@ async function loadReportsData() {
 }
 
 // ============================================
-// ATUALIZAR GRÁFICOS DE RELATÓRIOS - VERSÃO ÚNICA E ROBUSTA
+// ATUALIZAR GRÁFICOS DE RELATÓRIOS - CORRIGIDO COM PLANO AVULSO
 // ============================================
 function updateReportsCharts(appointments, clients) {
     try {
@@ -3160,7 +3169,7 @@ function updateReportsCharts(appointments, clients) {
 }
 
 // ============================================
-// ATUALIZAR LISTA DE CLIENTES NO RELATÓRIO - CORRIGIDA COM DATA DE INÍCIO
+// ATUALIZAR LISTA DE CLIENTES NO RELATÓRIO - CORRIGIDA COM PLANO AVULSO
 // ============================================
 async function updateReportClientsList(clients, appointments) {
     const tbody = document.getElementById('reportClientsList');
@@ -3195,7 +3204,7 @@ async function updateReportClientsList(clients, appointments) {
                 }
             }
             
-            if (client.status === 'active' && client.planValue) {
+            if (client.status === 'active' && client.planValue && client.plan !== 'AVULSO') {
                 revenue += client.planValue;
             }
             
@@ -3237,7 +3246,7 @@ async function updateReportClientsList(clients, appointments) {
 }
 
 // ============================================
-// GERAR RELATÓRIO INDIVIDUAL DO ALUNO - CORRIGIDA COM DATA DE INÍCIO
+// GERAR RELATÓRIO INDIVIDUAL DO ALUNO - CORRIGIDA COM PLANO AVULSO
 // ============================================
 async function generateClientReport(clientId) {
     try {
@@ -3278,7 +3287,7 @@ async function generateClientReport(clientId) {
             }
         }
         
-        if (client.status === 'active' && client.planValue) {
+        if (client.status === 'active' && client.planValue && client.plan !== 'AVULSO') {
             revenue += client.planValue;
         }
         
@@ -3339,10 +3348,12 @@ async function generateClientReport(clientId) {
                         <span class="client-report-detail-label">Plano:</span>
                         <span class="client-report-detail-value">${client.plan || 'Não possui'}</span>
                     </div>
+                    ${client.plan !== 'AVULSO' ? `
                     <div class="client-report-detail-item">
                         <span class="client-report-detail-label">Valor do Plano:</span>
                         <span class="client-report-detail-value">${client.planValue ? formatCurrency(client.planValue) : '---'}</span>
                     </div>
+                    ` : ''}
                     <div class="client-report-detail-item">
                         <span class="client-report-detail-label">Origem:</span>
                         <span class="client-report-detail-value">${client.origin || 'Direto'}</span>
@@ -3447,7 +3458,7 @@ function closeClientReportModal() {
 }
 
 // ============================================
-// GERAR RELATÓRIO GERAL EM PDF - CORRIGIDA COM DATA DE INÍCIO
+// GERAR RELATÓRIO GERAL EM PDF - CORRIGIDA COM PLANO AVULSO
 // ============================================
 async function generateGeneralReport() {
     try {
@@ -3489,6 +3500,7 @@ async function generateGeneralReport() {
         const totalPassClients = clients.filter(c => c.origin === 'Total Pass').length;
         const wellHubClients = clients.filter(c => c.origin === 'Well Hub').length;
         const directClients = clients.filter(c => !c.origin || c.origin === 'Direto').length;
+        const avulsoClients = clients.filter(c => c.plan === 'AVULSO').length;
         
         let totalRevenue = 0;
         for (const apt of appointments) {
@@ -3502,7 +3514,7 @@ async function generateGeneralReport() {
             }
         }
         
-        clients.filter(c => c.status === 'active').forEach(c => {
+        clients.filter(c => c.status === 'active' && c.plan !== 'AVULSO').forEach(c => {
             if (c.planValue) {
                 totalRevenue += c.planValue;
             }
@@ -3522,6 +3534,7 @@ async function generateGeneralReport() {
         doc.text(`Total Pass: ${totalPassClients}`, 120, 48);
         doc.text(`Well Hub: ${wellHubClients}`, 120, 55);
         doc.text(`Direto: ${directClients}`, 120, 62);
+        doc.text(`AVULSO: ${avulsoClients}`, 120, 69);
         
         doc.text('LISTA DE CLIENTES', 14, 90);
         
@@ -3757,228 +3770,228 @@ document.addEventListener('DOMContentLoaded', function() {
     appointmentsChart.render();
 
     // ============================================
-// GRÁFICO DE DISTRIBUIÇÃO DE PLANOS - VERSÃO PROFISSIONAL
-// ============================================
-servicesChart = new ApexCharts(document.querySelector("#servicesChart"), {
-    series: [],
-    chart: {
-        type: 'donut',
-        height: 320,
-        animations: {
-            enabled: true,
-            easing: 'easeinout',
-            speed: 800,
-            animateGradually: {
+    // GRÁFICO DE DISTRIBUIÇÃO DE PLANOS - VERSÃO PROFISSIONAL COM AVULSO
+    // ============================================
+    servicesChart = new ApexCharts(document.querySelector("#servicesChart"), {
+        series: [],
+        chart: {
+            type: 'donut',
+            height: 320,
+            animations: {
                 enabled: true,
-                delay: 150
-            },
-            dynamicAnimation: {
-                enabled: true,
-                speed: 350
-            }
-        },
-        background: 'transparent',
-        dropShadow: {
-            enabled: true,
-            top: 0,
-            left: 0,
-            blur: 10,
-            color: '#000',
-            opacity: 0.08
-        },
-        events: {
-            dataPointMouseEnter: function(event) {
-                event.target.style.cursor = 'pointer';
-            }
-        }
-    },
-
-    // PALETA DE CORES VIBRANTE E DIFERENCIADA
-    colors: ['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b'],
-
-    labels: ['MENSAL', 'TRIMESTRAL', 'SEMESTRAL', 'ANUAL'],
-
-    plotOptions: {
-        pie: {
-            expandOnClick: true,
-            donut: {
-                size: '72%',
-                background: 'transparent',
-                labels: {
-                    show: true,
-                    name: {
-                        show: true,
-                        fontSize: '13px',
-                        fontFamily: 'Plus Jakarta Sans, sans-serif',
-                        fontWeight: 600,
-                        color: 'var(--text-secondary)',
-                        offsetY: -8
-                    },
-                    value: {
-                        show: true,
-                        fontSize: '26px',
-                        fontFamily: 'Plus Jakarta Sans, sans-serif',
-                        fontWeight: 700,
-                        color: 'var(--text-primary)',
-                        offsetY: 8,
-                        formatter: function(val) {
-                            return val;
-                        }
-                    },
-                    total: {
-                        show: true,
-                        showAlways: true,
-                        label: 'Clientes',
-                        fontSize: '13px',
-                        fontFamily: 'Plus Jakarta Sans, sans-serif',
-                        fontWeight: 600,
-                        color: 'var(--text-tertiary)',
-                        formatter: function(w) {
-                            const total = w.globals.seriesTotals.reduce((a, b) => a + b, 0);
-                            return total;
-                        }
-                    }
-                }
-            },
-            dataLabels: {
-                offset: -5,
-                minAngleToShowLabel: 15
-            }
-        }
-    },
-
-    // RÓTULOS EXTERNOS LIMPOS
-    dataLabels: {
-        enabled: true,
-        formatter: function(val, opts) {
-            if (val < 8) return ''; // Oculta % muito pequenos para não sujar
-            return val.toFixed(1) + '%';
-        },
-        style: {
-            fontSize: '12px',
-            fontFamily: 'Plus Jakarta Sans, sans-serif',
-            fontWeight: 700,
-            colors: ['#ffffff']
-        },
-        dropShadow: {
-            enabled: true,
-            top: 1,
-            left: 1,
-            blur: 3,
-            color: '#00000055',
-            opacity: 0.6
-        }
-    },
-
-    // LEGENDA RICA COM ÍCONES E PORCENTAGEM
-    legend: {
-        show: true,
-        position: 'bottom',
-        horizontalAlign: 'center',
-        floating: false,
-        fontSize: '13px',
-        fontFamily: 'Plus Jakarta Sans, sans-serif',
-        fontWeight: 500,
-        offsetY: 4,
-        labels: {
-            colors: 'var(--text-primary)',
-            useSeriesColors: false
-        },
-        markers: {
-            width: 12,
-            height: 12,
-            radius: 6,
-            strokeWidth: 0,
-            offsetY: 1
-        },
-        itemMargin: {
-            horizontal: 14,
-            vertical: 6
-        },
-        formatter: function(seriesName, opts) {
-            const val = opts.w.globals.series[opts.seriesIndex] || 0;
-            return `${seriesName} &nbsp;<strong>${val}</strong>`;
-        }
-    },
-
-    // TOOLTIP PROFISSIONAL
-    tooltip: {
-        enabled: true,
-        theme: document.body.classList.contains('dark-theme') ? 'dark' : 'light',
-        fillSeriesColor: false,
-        style: {
-            fontSize: '13px',
-            fontFamily: 'Plus Jakarta Sans, sans-serif'
-        },
-        y: {
-            formatter: function(val, opts) {
-                const total = opts.w.globals.seriesTotals.reduce((a, b) => a + b, 0);
-                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
-                return `${val} cliente${val !== 1 ? 's' : ''} (${pct}%)`;
-            },
-            title: {
-                formatter: function(seriesName) {
-                    return `Plano ${seriesName}:`;
-                }
-            }
-        }
-    },
-
-    // BORDA ENTRE FATIAS
-    stroke: {
-        show: true,
-        width: 3,
-        colors: ['var(--bg-card)']
-    },
-
-    // ESTADOS DE HOVER / ACTIVE
-    states: {
-        hover: {
-            filter: { type: 'darken', value: 0.08 }
-        },
-        active: {
-            allowMultipleDataPointsSelection: false,
-            filter: { type: 'darken', value: 0.18 }
-        }
-    },
-
-    // RESPONSIVO
-    responsive: [
-        {
-            breakpoint: 1200,
-            options: {
-                chart: { height: 290 },
-                plotOptions: {
-                    pie: { donut: { size: '70%' } }
-                }
-            }
-        },
-        {
-            breakpoint: 768,
-            options: {
-                chart: { height: 270 },
-                legend: {
-                    position: 'bottom',
-                    fontSize: '11px',
-                    itemMargin: { horizontal: 8, vertical: 4 }
+                easing: 'easeinout',
+                speed: 800,
+                animateGradually: {
+                    enabled: true,
+                    delay: 150
                 },
-                plotOptions: {
-                    pie: {
-                        donut: {
-                            size: '68%',
-                            labels: {
-                                value: { fontSize: '20px' },
-                                name:  { fontSize: '11px' }
+                dynamicAnimation: {
+                    enabled: true,
+                    speed: 350
+                }
+            },
+            background: 'transparent',
+            dropShadow: {
+                enabled: true,
+                top: 0,
+                left: 0,
+                blur: 10,
+                color: '#000',
+                opacity: 0.08
+            },
+            events: {
+                dataPointMouseEnter: function(event) {
+                    event.target.style.cursor = 'pointer';
+                }
+            }
+        },
+
+        // PALETA DE CORES VIBRANTE E DIFERENCIADA
+        colors: ['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#FFA500'],
+
+        labels: ['MENSAL', 'TRIMESTRAL', 'SEMESTRAL', 'ANUAL', 'AVULSO'],
+
+        plotOptions: {
+            pie: {
+                expandOnClick: true,
+                donut: {
+                    size: '72%',
+                    background: 'transparent',
+                    labels: {
+                        show: true,
+                        name: {
+                            show: true,
+                            fontSize: '13px',
+                            fontFamily: 'Plus Jakarta Sans, sans-serif',
+                            fontWeight: 600,
+                            color: 'var(--text-secondary)',
+                            offsetY: -8
+                        },
+                        value: {
+                            show: true,
+                            fontSize: '26px',
+                            fontFamily: 'Plus Jakarta Sans, sans-serif',
+                            fontWeight: 700,
+                            color: 'var(--text-primary)',
+                            offsetY: 8,
+                            formatter: function(val) {
+                                return val;
+                            }
+                        },
+                        total: {
+                            show: true,
+                            showAlways: true,
+                            label: 'Clientes',
+                            fontSize: '13px',
+                            fontFamily: 'Plus Jakarta Sans, sans-serif',
+                            fontWeight: 600,
+                            color: 'var(--text-tertiary)',
+                            formatter: function(w) {
+                                const total = w.globals.seriesTotals.reduce((a, b) => a + b, 0);
+                                return total;
                             }
                         }
                     }
                 },
-                dataLabels: { enabled: false }   // Oculta labels externas em telas pequenas
+                dataLabels: {
+                    offset: -5,
+                    minAngleToShowLabel: 15
+                }
             }
-        }
-    ]
-});
-servicesChart.render();
+        },
+
+        // RÓTULOS EXTERNOS LIMPOS
+        dataLabels: {
+            enabled: true,
+            formatter: function(val, opts) {
+                if (val < 8) return ''; // Oculta % muito pequenos para não sujar
+                return val.toFixed(1) + '%';
+            },
+            style: {
+                fontSize: '12px',
+                fontFamily: 'Plus Jakarta Sans, sans-serif',
+                fontWeight: 700,
+                colors: ['#ffffff']
+            },
+            dropShadow: {
+                enabled: true,
+                top: 1,
+                left: 1,
+                blur: 3,
+                color: '#00000055',
+                opacity: 0.6
+            }
+        },
+
+        // LEGENDA RICA COM ÍCONES E PORCENTAGEM
+        legend: {
+            show: true,
+            position: 'bottom',
+            horizontalAlign: 'center',
+            floating: false,
+            fontSize: '13px',
+            fontFamily: 'Plus Jakarta Sans, sans-serif',
+            fontWeight: 500,
+            offsetY: 4,
+            labels: {
+                colors: 'var(--text-primary)',
+                useSeriesColors: false
+            },
+            markers: {
+                width: 12,
+                height: 12,
+                radius: 6,
+                strokeWidth: 0,
+                offsetY: 1
+            },
+            itemMargin: {
+                horizontal: 14,
+                vertical: 6
+            },
+            formatter: function(seriesName, opts) {
+                const val = opts.w.globals.series[opts.seriesIndex] || 0;
+                return `${seriesName} &nbsp;<strong>${val}</strong>`;
+            }
+        },
+
+        // TOOLTIP PROFISSIONAL
+        tooltip: {
+            enabled: true,
+            theme: document.body.classList.contains('dark-theme') ? 'dark' : 'light',
+            fillSeriesColor: false,
+            style: {
+                fontSize: '13px',
+                fontFamily: 'Plus Jakarta Sans, sans-serif'
+            },
+            y: {
+                formatter: function(val, opts) {
+                    const total = opts.w.globals.seriesTotals.reduce((a, b) => a + b, 0);
+                    const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                    return `${val} cliente${val !== 1 ? 's' : ''} (${pct}%)`;
+                },
+                title: {
+                    formatter: function(seriesName) {
+                        return `Plano ${seriesName}:`;
+                    }
+                }
+            }
+        },
+
+        // BORDA ENTRE FATIAS
+        stroke: {
+            show: true,
+            width: 3,
+            colors: ['var(--bg-card)']
+        },
+
+        // ESTADOS DE HOVER / ACTIVE
+        states: {
+            hover: {
+                filter: { type: 'darken', value: 0.08 }
+            },
+            active: {
+                allowMultipleDataPointsSelection: false,
+                filter: { type: 'darken', value: 0.18 }
+            }
+        },
+
+        // RESPONSIVO
+        responsive: [
+            {
+                breakpoint: 1200,
+                options: {
+                    chart: { height: 290 },
+                    plotOptions: {
+                        pie: { donut: { size: '70%' } }
+                    }
+                }
+            },
+            {
+                breakpoint: 768,
+                options: {
+                    chart: { height: 270 },
+                    legend: {
+                        position: 'bottom',
+                        fontSize: '11px',
+                        itemMargin: { horizontal: 8, vertical: 4 }
+                    },
+                    plotOptions: {
+                        pie: {
+                            donut: {
+                                size: '68%',
+                                labels: {
+                                    value: { fontSize: '20px' },
+                                    name:  { fontSize: '11px' }
+                                }
+                            }
+                        }
+                    },
+                    dataLabels: { enabled: false }   // Oculta labels externas em telas pequenas
+                }
+            }
+        ]
+    });
+    servicesChart.render();
 
     
     reportsLineChart = new ApexCharts(document.querySelector("#reportsLineChart"), {
@@ -4026,4 +4039,3 @@ servicesChart.render();
         loadReportsData();
     }
 });
-
