@@ -1,82 +1,54 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Funções auxiliares
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    function isAdmin() {
-      return isAuthenticated() && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-    
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-    
-    function isProfessional() {
-      return isAuthenticated() && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'professional'];
-    }
 
     // Usuários
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if isOwner(userId) || isAdmin();
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Função auxiliar
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Collections protegidas (exigem userId no documento)
+    match /professionals/{docId} {
+      allow read, delete: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow update: if isOwner(resource.data.userId)
+                    && request.resource.data.userId == resource.data.userId;
+    }
+
+    match /services/{docId} {
+      allow read, delete: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow update: if isOwner(resource.data.userId)
+                    && request.resource.data.userId == resource.data.userId;
+    }
+
+    match /clients/{docId} {
+      allow read, delete: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow update: if isOwner(resource.data.userId)
+                    && request.resource.data.userId == resource.data.userId;
+    }
+
+    match /appointments/{docId} {
+      allow read, delete: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow update: if isOwner(resource.data.userId)
+                    && request.resource.data.userId == resource.data.userId;
+    }
+
+    // ============================================
+    // SETTINGS - REGRAS ESPECÍFICAS (NÃO USA userId)
+    // ============================================
+    match /settings/{userId} {
+      // Permite leitura/escrita baseado no ID do documento (que é o UID)
+      allow read, write: if request.auth != null && request.auth.uid == userId;
       
-      match /notifications/{notificationId} {
-        allow read, write: if isOwner(userId);
-      }
-      
-      match /settings/{settingId} {
-        allow read, write: if isOwner(userId);
-      }
-    }
-    
-    // Agendamentos
-    match /appointments/{appointmentId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update, delete: if isAuthenticated() && 
-        (resource.data.clientId == request.auth.uid || 
-         resource.data.professionalId == request.auth.uid ||
-         isAdmin());
-    }
-    
-    // Profissionais
-    match /professionals/{professionalId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-    }
-    
-    // Serviços
-    match /services/{serviceId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-    }
-    
-    // Clientes
-    match /clients/{clientId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin() || isProfessional();
-    }
-    
-    // Financeiro
-    match /transactions/{transactionId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-    }
-    
-    match /commissions/{commissionId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-    }
-    
-    // Histórico
-    match /activityLogs/{logId} {
-      allow read: if isAdmin();
-      allow write: if isAuthenticated();
+      // Não precisa verificar campo userId porque o ID já é o identificador
     }
   }
 }

@@ -13,6 +13,14 @@
     <!-- Fonts & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="manifest" href="/manifest.json">
+
+    <meta name="theme-color" content="#7c3aed">
+
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="NEXBOOK">
         <!-- No head, substitua o <style> por: -->
     <link rel="stylesheet" href="css/index.css">
 
@@ -295,5 +303,14 @@
     </div><!-- /wrapper -->
     <script src="js/index.js"></script>
     <script src="js/script.js"></script>
+    <script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(reg => console.log('Service Worker registrado', reg))
+      .catch(err => console.log('Erro no Service Worker', err));
+  });
+}
+</script>
 </body>
 </html>
