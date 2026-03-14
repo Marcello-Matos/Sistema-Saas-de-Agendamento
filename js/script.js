@@ -3271,32 +3271,6 @@ function addCalendarStyles() {
 }
 
 // ============================================
-// AUTH STATE
-// ============================================
-auth.onAuthStateChanged(user => {
-    if (user) {
-        currentUser = user;
-        currentUserId = user.uid;
-        
-        document.querySelector('.main').style.display = 'flex';
-        document.querySelector('.sidebar').style.display = 'flex';
-        
-        updateUserInterface(user);
-        loadAllData();
-        initializeCalendar();
-        adjustTablesForMobile();
-        
-        // Carregar cores salvas
-        loadSavedColors();
-    } else {
-        currentUser = null;
-        currentUserId = null;
-        
-        window.location.href = 'index.html';
-    }
-});
-
-// ============================================
 // LOGOUT
 // ============================================
 function logout() {
@@ -4054,11 +4028,12 @@ async function checkUserPlan() {
     }
 }
 
+// ✅ ÚNICO auth.onAuthStateChanged — VERSÃO FINAL COMPLETA
 auth.onAuthStateChanged(async user => {
     if (user) {
         currentUser = user;
         currentUserId = user.uid;
-        
+
         const temAcesso = await checkUserPlan();
         if (temAcesso) {
             document.querySelector('.main').style.display = 'flex';
@@ -4066,11 +4041,16 @@ auth.onAuthStateChanged(async user => {
             updateUserInterface(user);
             loadAllData();
             initializeCalendar();
+            adjustTablesForMobile(); // ← vinha do 1º listener, manter aqui
+            loadSavedColors();       // ← vinha do 1º listener, manter aqui
         }
     } else {
+        currentUser = null;          // ← vinha do 1º listener, manter aqui
+        currentUserId = null;        // ← vinha do 1º listener, manter aqui
         window.location.href = 'index.html';
     }
 });
+
 
 function hasFeature(feature) {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -4459,3 +4439,4 @@ document.addEventListener('DOMContentLoaded', function() {
         loadReportsData();
     }
 });
+

@@ -87,13 +87,13 @@
         <!-- Header -->
         <div class="header">
             <div class="page-title">
-                <h1>Dashboard Inteligente</h1>
-                <p>Visão geral do seu negócio com insights em tempo real</p>
+                <h1 data-i18n="dashboardTitle">Dashboard Inteligente</h1>
+                <p data-i18n="dashboardSubtitle">Visão geral do seu negócio com insights em tempo real</p>
             </div>
             <div class="header-actions">   
                 <div class="search-box">
                     <i class="fas fa-search"></i>
-                    <input type="text" placeholder="Buscar..." id="globalSearch" onkeyup="handleGlobalSearch()">
+                    <input type="text" placeholder="Buscar..." id="globalSearch" data-i18n-placeholder="search" onkeyup="handleGlobalSearch()">
                 </div>
                 <div class="notification">
                     <i class="fas fa-bell"></i>
@@ -112,14 +112,14 @@
                 
                 <div class="user-dropdown" id="userDropdown">
                     <div class="dropdown-item" onclick="viewProfile()">
-                        <i class="fas fa-user"></i> Meu Perfil
+                        <i class="fas fa-user"></i> <span data-i18n="myProfile">Meu Perfil</span>
                     </div>
                     <div class="dropdown-item" onclick="viewSettings()">
-                        <i class="fas fa-cog"></i> Configurações
+                        <i class="fas fa-cog"></i> <span data-i18n="settings">Configurações</span>
                     </div>
                     <div class="dropdown-divider"></div>
                     <div class="dropdown-item" onclick="logout()">
-                        <i class="fas fa-sign-out-alt"></i> Sair
+                        <i class="fas fa-sign-out-alt"></i> <span data-i18n="logout">Sair</span>
                     </div>
                 </div>
             </div>
@@ -131,24 +131,24 @@
             <div id="dashboardView" class="view active">
                 <div class="global-filters">
                     <select class="filter-select" id="periodFilter" onchange="handlePeriodChange()">
-                        <option value="7">Últimos 7 dias</option>
-                        <option value="30" selected>Últimos 30 dias</option>
-                        <option value="90">Este mês</option>
-                        <option value="custom">Personalizado</option>
+                        <option value="7" data-i18n="last7days">Últimos 7 dias</option>
+                        <option value="30" selected data-i18n="last30days">Últimos 30 dias</option>
+                        <option value="90" data-i18n="thisMonth">Este mês</option>
+                        <option value="custom" data-i18n="custom">Personalizado</option>
                     </select>
                     <select class="filter-select" id="professionalFilter" onchange="applyFilters()">
-                        <option value="all">Todos profissionais</option>
+                        <option value="all" data-i18n="allProfessionals">Todos profissionais</option>
                     </select>
                     <select class="filter-select" id="serviceFilter" onchange="applyFilters()">
-                        <option value="all">Todos serviços</option>
+                        <option value="all" data-i18n="allServices">Todos serviços</option>
                     </select>
                     <div class="date-range" id="customDateRange" style="display: none;">
                         <input type="date" id="startDate">
-                        <span>até</span>
+                        <span data-i18n="to">até</span>
                         <input type="date" id="endDate">
                     </div>
                     <button class="apply-filters" onclick="applyFilters()">
-                        <i class="fas fa-filter"></i> Aplicar
+                        <i class="fas fa-filter"></i> <span data-i18n="apply">Aplicar</span>
                     </button>
                 </div>
 
@@ -157,48 +157,48 @@
                     <div class="stat-card" onclick="openModal('appointment')">
                         <div class="stat-header">
                             <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
-                            <span class="stat-badge" id="todayBadge">Hoje</span>
+                            <span class="stat-badge" id="todayBadge" data-i18n="today">Hoje</span>
                         </div>
                         <div class="stat-value" id="todayCount">0</div>
-                        <div class="stat-label">Agendamentos hoje</div>
+                        <div class="stat-label" data-i18n="appointmentsToday">Agendamentos hoje</div>
                         <div class="stat-comparison">
-                            <i class="fas fa-arrow-up"></i> <span>+12%</span> vs ontem
+                            <i class="fas fa-arrow-up"></i> <span>+12%</span> <span data-i18n="vsYesterday">vs ontem</span>
                         </div>
                     </div>
                     
                     <div class="stat-card" onclick="openModal('appointment')">
                         <div class="stat-header">
                             <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
-                            <span class="stat-badge" id="revenueBadge">Hoje</span>
+                            <span class="stat-badge" id="revenueBadge" data-i18n="today">Hoje</span>
                         </div>
                         <div class="stat-value" id="revenueValue">R$ 0</div>
-                        <div class="stat-label">Faturamento hoje</div>
+                        <div class="stat-label" data-i18n="revenueToday">Faturamento hoje</div>
                         <div class="stat-comparison">
-                            <i class="fas fa-arrow-up"></i> <span>+8%</span> vs ontem
+                            <i class="fas fa-arrow-up"></i> <span>+8%</span> <span data-i18n="vsYesterday">vs ontem</span>
                         </div>
                     </div>
                     
                     <div class="stat-card" onclick="document.querySelector('[data-view=\"professionals\"]').click()">
                         <div class="stat-header">
                             <div class="stat-icon"><i class="fas fa-user-md"></i></div>
-                            <span class="stat-badge" id="attendanceBadge">Ativos</span>
+                            <span class="stat-badge" id="attendanceBadge" data-i18n="active">Ativos</span>
                         </div>
                         <div class="stat-value" id="attendanceValue">0</div>
-                        <div class="stat-label">Profissionais</div>
+                        <div class="stat-label" data-i18n="professionals">Profissionais</div>
                         <div class="stat-comparison">
-                            <i class="fas fa-arrow-up"></i> <span>+2</span> este mês
+                            <i class="fas fa-arrow-up"></i> <span>+2</span> <span data-i18n="thisMonth">este mês</span>
                         </div>
                     </div>
                     
                     <div class="stat-card" onclick="document.querySelector('[data-view=\"clients\"]').click()">
                         <div class="stat-header">
                             <div class="stat-icon"><i class="fas fa-users"></i></div>
-                            <span class="stat-badge" id="clientsBadge">Ativos</span>
+                            <span class="stat-badge" id="clientsBadge" data-i18n="active">Ativos</span>
                         </div>
                         <div class="stat-value" id="clientsValue">0</div>
-                        <div class="stat-label">Clientes</div>
+                        <div class="stat-label" data-i18n="clients">Clientes</div>
                         <div class="stat-comparison">
-                            <i class="fas fa-arrow-up"></i> <span>+15</span> este mês
+                            <i class="fas fa-arrow-up"></i> <span>+15</span> <span data-i18n="thisMonth">este mês</span>
                         </div>
                     </div>
                 </div>
@@ -207,15 +207,15 @@
                 <div class="charts-grid">
                     <div class="chart-card">
                         <div class="chart-header">
-                            <h3>Agendamentos por dia</h3>
-                            <span>Últimos 7 dias</span>
+                            <h3 data-i18n="appointmentsPerDay">Agendamentos por dia</h3>
+                            <span data-i18n="last7days">Últimos 7 dias</span>
                         </div>
                         <div id="appointmentsChart"></div>
                     </div>
                     <div class="chart-card">
                         <div class="chart-header">
-                            <h3>Serviços mais procurados</h3>
-                            <span>Este mês</span>
+                            <h3 data-i18n="mostWantedServices">Serviços mais procurados</h3>
+                            <span data-i18n="thisMonth">Este mês</span>
                         </div>
                         <div id="servicesChart"></div>
                     </div>
@@ -225,18 +225,16 @@
                 <div class="appointments-card">
                     <div class="appointments-header">
                         <div style="display: flex; align-items: center;">
-                            <h3>Próximos agendamentos</h3>
+                            <h3 data-i18n="nextAppointments">Próximos agendamentos</h3>
                         </div>
-                        <!-- BOTÃO ENVIAR VIA WHATSAPP - AGORA NO HEADER -->
                 <button class="btn-whatsapp-header" onclick="openWhatsAppSelectModal()">
                     <i class="fab fa-whatsapp" style="font-size: 18px;"></i>
-                    <span>Enviar via WhatsApp</span>
+                    <span data-i18n="sendWhatsApp">Enviar via WhatsApp</span>
                 </button>
-                        <a onclick="openModal('appointment')">+ Novo agendamento</a>
+                        <a onclick="openModal('appointment')" data-i18n="newAppointment">+ Novo agendamento</a>
                     </div>
                     <div class="appointments-list" id="appointmentsList">
-                        <!-- Será preenchido via JavaScript com os botões individuais -->
-                        <div class="loading-state">Carregando agendamentos...</div>
+                        <div class="loading-state" data-i18n="loadingAppointments">Carregando agendamentos...</div>
                     </div>
                 </div>
             </div>
@@ -245,7 +243,7 @@
             <div id="calendarView" class="view">
                 <div style="margin-bottom: 20px; display: flex; justify-content: flex-end;">
                     <button class="btn-primary" onclick="openModal('appointment')">
-                        <i class="fas fa-plus"></i> Novo Agendamento
+                        <i class="fas fa-plus"></i> <span data-i18n="newAppointment">Novo Agendamento</span>
                     </button>
                 </div>
                 <div id="calendar"></div>
@@ -255,25 +253,25 @@
             <div id="professionalsView" class="view">
                 <div class="table-container">
                     <div class="table-header">
-                        <h2>Profissionais</h2>
+                        <h2 data-i18n="professionals">Profissionais</h2>
                         <button class="btn-primary" onclick="openModal('professional')">
-                            <i class="fas fa-plus"></i> Novo Profissional
+                            <i class="fas fa-plus"></i> <span data-i18n="newProfessional">Novo Profissional</span>
                         </button>
                     </div>
                     <div class="table-responsive">
                         <table id="professionalsTable">
                             <thead>
                                 <tr>
-                                    <th>Nome</th>
-                                    <th>Especialidade</th>
+                                    <th data-i18n="name">Nome</th>
+                                    <th data-i18n="specialty">Especialidade</th>
                                     <th>Email</th>
-                                    <th>Telefone</th>
-                                    <th>Status</th>
-                                    <th>Ações</th>
+                                    <th data-i18n="phone">Telefone</th>
+                                    <th data-i18n="status">Status</th>
+                                    <th data-i18n="actions">Ações</th>
                                 </tr>
                             </thead>
                             <tbody id="professionalsList">
-                                <tr><td colspan="6" style="text-align: center;">Carregando...</td></tr>
+                                <tr><td colspan="6" style="text-align: center;" data-i18n="loading">Carregando...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -284,24 +282,24 @@
             <div id="servicesView" class="view">
                 <div class="table-container">
                     <div class="table-header">
-                        <h2>Serviços</h2>
+                        <h2 data-i18n="services">Serviços</h2>
                         <button class="btn-primary" onclick="openModal('service')">
-                            <i class="fas fa-plus"></i> Novo Serviço
+                            <i class="fas fa-plus"></i> <span data-i18n="newService">Novo Serviço</span>
                         </button>
                     </div>
                     <div class="table-responsive">
                         <table id="servicesTable">
                             <thead>
                                 <tr>
-                                    <th>Nome</th>
-                                    <th>Duração</th>
-                                    <th>Descrição</th>
-                                    <th>Status</th>
-                                    <th>Ações</th>
+                                    <th data-i18n="name">Nome</th>
+                                    <th data-i18n="duration">Duração</th>
+                                    <th data-i18n="description">Descrição</th>
+                                    <th data-i18n="status">Status</th>
+                                    <th data-i18n="actions">Ações</th>
                                 </tr>
                             </thead>
                             <tbody id="servicesList">
-                                <tr><td colspan="5" style="text-align: center;">Carregando...</td></tr>
+                                <tr><td colspan="5" style="text-align: center;" data-i18n="loading">Carregando...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -312,15 +310,15 @@
             <div id="clientsView" class="view">
                 <div class="table-container">
                     <div class="table-header">
-                        <h2>Clientes</h2>
+                        <h2 data-i18n="clients">Clientes</h2>
                         <div style="display: flex; gap: 10px;">
                             <button class="btn-primary" onclick="openModal('client')">
-                                <i class="fas fa-plus"></i> Novo Cliente
+                                <i class="fas fa-plus"></i> <span data-i18n="newClient">Novo Cliente</span>
                             </button>
-                            <button class="btn-primary" onclick="openModal('totalpass')" style="background: linear-gradient(135deg, #D91828, #8C0D0D);">
+                            <button class="btn-primary" onclick="openModal('totalpass')" style="background: linear-gradient(135deg, #D91828, #8C0D0D);" data-i18n="totalpass">
                                 <i class="fas fa-dumbbell"></i> Total Pass
                             </button>
-                            <button class="btn-primary" onclick="openModal('wellhub')" style="background: linear-gradient(135deg, #D91414, #591218);">
+                            <button class="btn-primary" onclick="openModal('wellhub')" style="background: linear-gradient(135deg, #D91414, #591218);" data-i18n="wellhub">
                                 <i class="fas fa-heart"></i> Well Hub
                             </button>
                         </div>
@@ -329,23 +327,23 @@
                         <table id="clientsTable">
                             <thead>
                                 <tr>
-                                    <th>Foto</th>
-                                    <th>Nome</th>
-                                    <th>Data Nasc.</th>
+                                    <th data-i18n="photo">Foto</th>
+                                    <th data-i18n="name">Nome</th>
+                                    <th data-i18n="birthdate">Data Nasc.</th>
                                     <th>CPF</th>
                                     <th>Email</th>
-                                    <th>Telefone</th>
-                                    <th>Plano</th>
-                                    <th>Origem</th>
-                                    <th>Valor</th>
-                                    <th>Data Início</th>
-                                    <th>Cidade</th>
-                                    <th>Status</th>
-                                    <th>Ações</th>
+                                    <th data-i18n="phone">Telefone</th>
+                                    <th data-i18n="plan">Plano</th>
+                                    <th data-i18n="origin">Origem</th>
+                                    <th data-i18n="value">Valor</th>
+                                    <th data-i18n="startDate">Data Início</th>
+                                    <th data-i18n="city">Cidade</th>
+                                    <th data-i18n="status">Status</th>
+                                    <th data-i18n="actions">Ações</th>
                                 </tr>
                             </thead>
                             <tbody id="clientsList">
-                                <tr><td colspan="13" style="text-align: center;">Carregando...</td></tr>
+                                <tr><td colspan="13" style="text-align: center;" data-i18n="loading">Carregando...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -355,19 +353,18 @@
             <!-- Reports View -->
             <div id="reportsView" class="view">
                 <div class="reports-container">
-                    <!-- Cabeçalho com ações -->
                     <div class="reports-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
-                        <h2 style="font-size: 24px; font-weight: 700; color: var(--text-primary);">Relatórios e Análises</h2>
+                        <h2 data-i18n="reportsTitle">Relatórios e Análises</h2>
                         <div style="display: flex; gap: 12px; flex-wrap: wrap;">
                             <select class="filter-select" id="reportPeriod" style="min-width: 150px;">
-                                <option value="7">Últimos 7 dias</option>
-                                <option value="30" selected>Últimos 30 dias</option>
-                                <option value="90">Últimos 90 dias</option>
-                                <option value="365">Último ano</option>
-                                <option value="all">Todo período</option>
+                                <option value="7" data-i18n="last7days">Últimos 7 dias</option>
+                                <option value="30" selected data-i18n="last30days">Últimos 30 dias</option>
+                                <option value="90" data-i18n="last90days">Últimos 90 dias</option>
+                                <option value="365" data-i18n="lastYear">Último ano</option>
+                                <option value="all" data-i18n="allPeriod">Todo período</option>
                             </select>
                             <button class="btn-primary" onclick="generateGeneralReport()">
-                                <i class="fas fa-file-pdf"></i> Relatório Geral
+                                <i class="fas fa-file-pdf"></i> <span data-i18n="generalReport">Relatório Geral</span>
                             </button>
                         </div>
                     </div>
@@ -377,48 +374,48 @@
                         <div class="stat-card">
                             <div class="stat-header">
                                 <div class="stat-icon"><i class="fas fa-users"></i></div>
-                                <span class="stat-badge positive">Total</span>
+                                <span class="stat-badge positive" data-i18n="total">Total</span>
                             </div>
                             <div class="stat-value" id="totalClients">0</div>
-                            <div class="stat-label">Clientes Ativos</div>
+                            <div class="stat-label" data-i18n="activeClients">Clientes Ativos</div>
                             <div class="stat-comparison">
-                                <i class="fas fa-chart-line"></i> <span id="clientsGrowth">+0%</span> vs período anterior
+                                <i class="fas fa-chart-line"></i> <span id="clientsGrowth">+0%</span> <span data-i18n="vsPreviousPeriod">vs período anterior</span>
                             </div>
                         </div>
                         
                         <div class="stat-card">
                             <div class="stat-header">
                                 <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
-                                <span class="stat-badge positive">Mês</span>
+                                <span class="stat-badge positive" data-i18n="month">Mês</span>
                             </div>
                             <div class="stat-value" id="totalAppointments">0</div>
-                            <div class="stat-label">Agendamentos</div>
+                            <div class="stat-label" data-i18n="appointments">Agendamentos</div>
                             <div class="stat-comparison">
-                                <i class="fas fa-chart-line"></i> <span id="appointmentsGrowth">+0%</span> vs período anterior
+                                <i class="fas fa-chart-line"></i> <span id="appointmentsGrowth">+0%</span> <span data-i18n="vsPreviousPeriod">vs período anterior</span>
                             </div>
                         </div>
                         
                         <div class="stat-card">
                             <div class="stat-header">
                                 <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
-                                <span class="stat-badge positive">Mês</span>
+                                <span class="stat-badge positive" data-i18n="month">Mês</span>
                             </div>
                             <div class="stat-value" id="totalRevenue">R$ 0</div>
-                            <div class="stat-label">Faturamento</div>
+                            <div class="stat-label" data-i18n="revenue">Faturamento</div>
                             <div class="stat-comparison">
-                                <i class="fas fa-chart-line"></i> <span id="revenueGrowth">+0%</span> vs período anterior
+                                <i class="fas fa-chart-line"></i> <span id="revenueGrowth">+0%</span> <span data-i18n="vsPreviousPeriod">vs período anterior</span>
                             </div>
                         </div>
                         
                         <div class="stat-card">
                             <div class="stat-header">
                                 <div class="stat-icon"><i class="fas fa-user-check"></i></div>
-                                <span class="stat-badge positive">Média</span>
+                                <span class="stat-badge positive" data-i18n="average">Média</span>
                             </div>
                             <div class="stat-value" id="attendanceRate">0%</div>
-                            <div class="stat-label">Taxa de Comparecimento</div>
+                            <div class="stat-label" data-i18n="attendanceRate">Taxa de Comparecimento</div>
                             <div class="stat-comparison">
-                                <i class="fas fa-chart-line"></i> <span id="attendanceChange">+0%</span> vs período anterior
+                                <i class="fas fa-chart-line"></i> <span id="attendanceChange">+0%</span> <span data-i18n="vsPreviousPeriod">vs período anterior</span>
                             </div>
                         </div>
                     </div>
@@ -427,24 +424,24 @@
                     <div class="charts-grid" style="margin-bottom: 24px;">
                         <div class="chart-card">
                             <div class="chart-header">
-                                <h3>Evolução de Agendamentos</h3>
-                                <span>Período selecionado</span>
+                                <h3 data-i18n="appointmentsEvolution">Evolução de Agendamentos</h3>
+                                <span data-i18n="selectedPeriod">Período selecionado</span>
                             </div>
                             <div id="reportsLineChart"></div>
                         </div>
                         
                         <div class="chart-card">
                             <div class="chart-header">
-                                <h3>Distribuição por Origem</h3>
-                                <span>Total Pass vs Well Hub vs Direto</span>
+                                <h3 data-i18n="distributionByOrigin">Distribuição por Origem</h3>
+                                <span data-i18n="totalpassVsWellhub">Total Pass vs Well Hub vs Direto</span>
                             </div>
                             <div id="reportsPieChart"></div>
                         </div>
                         
                         <div class="chart-card">
                             <div class="chart-header">
-                                <h3>Desempenho por Profissional</h3>
-                                <span>Agendamentos no período</span>
+                                <h3 data-i18n="performanceByProfessional">Desempenho por Profissional</h3>
+                                <span data-i18n="appointmentsPeriod">Agendamentos no período</span>
                             </div>
                             <div id="reportsBarChart"></div>
                         </div>
@@ -453,29 +450,29 @@
                     <!-- Tabela de Clientes para Relatório Individual -->
                     <div class="table-container">
                         <div class="table-header">
-                            <h3>Clientes</h3>
+                            <h3 data-i18n="clients">Clientes</h3>
                             <div style="display: flex; gap: 10px;">
-                                <input type="text" class="filter-select" id="reportClientSearch" placeholder="Buscar cliente..." style="width: 250px;" onkeyup="filterReportClients()">
+                                <input type="text" class="filter-select" id="reportClientSearch" data-i18n-placeholder="searchClient" placeholder="Buscar cliente..." style="width: 250px;" onkeyup="filterReportClients()">
                             </div>
                         </div>
                         <div class="table-responsive">
                             <table id="reportClientsTable">
                                 <thead>
                                     <tr>
-                                        <th>Nome</th>
-                                        <th>Plano</th>
-                                        <th>Origem</th>
-                                        <th>Data Início</th>
-                                        <th>Agendamentos</th>
-                                        <th>Comparecimentos</th>
-                                        <th>Faltas</th>
-                                        <th>Taxa</th>
-                                        <th>Receita</th>
-                                        <th>Ações</th>
+                                        <th data-i18n="name">Nome</th>
+                                        <th data-i18n="plan">Plano</th>
+                                        <th data-i18n="origin">Origem</th>
+                                        <th data-i18n="startDate">Data Início</th>
+                                        <th data-i18n="appointments">Agendamentos</th>
+                                        <th data-i18n="attendances">Comparecimentos</th>
+                                        <th data-i18n="absences">Faltas</th>
+                                        <th data-i18n="rate">Taxa</th>
+                                        <th data-i18n="revenue">Receita</th>
+                                        <th data-i18n="actions">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody id="reportClientsList">
-                                    <tr><td colspan="10" style="text-align: center;">Carregando...</td></tr>
+                                    <tr><td colspan="10" style="text-align: center;" data-i18n="loading">Carregando...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -486,83 +483,98 @@
             <!-- Settings View -->
             <div id="settingsView" class="view">
                 <div class="settings-grid">
+                    <!-- NOVO CARD DE IDIOMA -->
                     <div class="settings-card">
-                        <h3>Configurações Gerais</h3>
+                        <h3><i class="fas fa-globe"></i> <span data-i18n="language">Idioma</span></h3>
                         <div class="settings-item">
                             <div class="settings-item-info">
-                                <h4>Nome da Empresa</h4>
+                                <h4 data-i18n="interfaceLanguage">Idioma da Interface</h4>
+                                <p data-i18n="selectLanguage">Selecione o idioma do sistema</p>
+                            </div>
+                            <select id="languageSelect" onchange="changeLanguage(this.value)" style="padding: 12px 16px; border: 2px solid var(--border); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); font-size: 14px; min-width: 200px;">
+                                <option value="pt-BR" selected>🇧🇷 Português</option>
+                                <option value="en">🇺🇸 English</option>
+                                <option value="es">🇪🇸 Español</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="settings-card">
+                        <h3 data-i18n="generalSettings">Configurações Gerais</h3>
+                        <div class="settings-item">
+                            <div class="settings-item-info">
+                                <h4 data-i18n="companyName">Nome da Empresa</h4>
                                 <p id="companyNameField">NEXBOOK</p>
                             </div>
-                            <button class="btn-secondary" onclick="editSetting('companyName')">Editar</button>
+                            <button class="btn-secondary" onclick="editSetting('companyName')"><span data-i18n="edit">Editar</span></button>
                         </div>
                         <div class="settings-item">
                             <div class="settings-item-info">
-                                <h4>Email de Contato</h4>
+                                <h4 data-i18n="contactEmail">Email de Contato</h4>
                                 <p id="companyEmailField">contato@nexbook.com</p>
                             </div>
-                            <button class="btn-secondary" onclick="editSetting('companyEmail')">Editar</button>
+                            <button class="btn-secondary" onclick="editSetting('companyEmail')"><span data-i18n="edit">Editar</span></button>
                         </div>
                         <div class="settings-item">
                             <div class="settings-item-info">
-                                <h4>Telefone</h4>
+                                <h4 data-i18n="phone">Telefone</h4>
                                 <p id="companyPhoneField">(11) 99999-9999</p>
                             </div>
-                            <button class="btn-secondary" onclick="editSetting('companyPhone')">Editar</button>
+                            <button class="btn-secondary" onclick="editSetting('companyPhone')"><span data-i18n="edit">Editar</span></button>
                         </div>
                         <div class="settings-item">
                             <div class="settings-item-info">
-                                <h4>Endereço</h4>
+                                <h4 data-i18n="address">Endereço</h4>
                                 <p id="companyAddressField">Av. Principal, 1000</p>
                             </div>
-                            <button class="btn-secondary" onclick="editSetting('companyAddress')">Editar</button>
+                            <button class="btn-secondary" onclick="editSetting('companyAddress')"><span data-i18n="edit">Editar</span></button>
                         </div>
                     </div>
                     
                     <div class="settings-card">
-                        <h3>Horário de Funcionamento</h3>
+                        <h3 data-i18n="workingHours">Horário de Funcionamento</h3>
                         <div class="settings-item">
                             <div class="settings-item-info">
-                                <h4>Segunda à Sexta</h4>
+                                <h4 data-i18n="mondayToFriday">Segunda à Sexta</h4>
                                 <p id="weekdayHoursField">09:00 - 18:00</p>
                             </div>
-                            <button class="btn-secondary" onclick="editSetting('weekdayHours')">Editar</button>
+                            <button class="btn-secondary" onclick="editSetting('weekdayHours')"><span data-i18n="edit">Editar</span></button>
                         </div>
                         <div class="settings-item">
                             <div class="settings-item-info">
-                                <h4>Sábado</h4>
+                                <h4 data-i18n="saturday">Sábado</h4>
                                 <p id="saturdayHoursField">09:00 - 13:00</p>
                             </div>
-                            <button class="btn-secondary" onclick="editSetting('saturdayHours')">Editar</button>
+                            <button class="btn-secondary" onclick="editSetting('saturdayHours')"><span data-i18n="edit">Editar</span></button>
                         </div>
                         <div class="settings-item">
                             <div class="settings-item-info">
-                                <h4>Domingo</h4>
-                                <p id="sundayHoursField">Fechado</p>
+                                <h4 data-i18n="sunday">Domingo</h4>
+                                <p id="sundayHoursField" data-i18n="closed">Fechado</p>
                             </div>
-                            <button class="btn-secondary" onclick="editSetting('sundayHours')">Editar</button>
+                            <button class="btn-secondary" onclick="editSetting('sundayHours')"><span data-i18n="edit">Editar</span></button>
                         </div>
                     </div>
 
-                    <!-- NOVO CARD DESIGN -->
                     <div class="settings-card">
-                        <h3><i class="fas fa-palette"></i> Design & Cores</h3>
+                        <h3><i class="fas fa-palette"></i> <span data-i18n="designColors">Design & Cores</span></h3>
                         <div class="settings-item">
                             <div class="settings-item-info">
-                                <h4>Personalizar Cores do Sistema</h4>
-                                <p>Altere as cores principais do layout completo</p>
+                                <h4 data-i18n="customizeSystemColors">Personalizar Cores do Sistema</h4>
+                                <p data-i18n="changeLayoutColors">Altere as cores principais do layout completo</p>
                             </div>
                             <button class="btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;" onclick="openDesignModal()">
-                                <i class="fas fa-magic"></i> DESIGN
+                                <i class="fas fa-magic"></i> <span data-i18n="design">DESIGN</span>
                             </button>
                         </div>
                     </div>
                     
                     <div class="settings-card">
-                        <h3>Notificações</h3>
+                        <h3 data-i18n="notifications">Notificações</h3>
                         <div class="settings-item">
                             <div class="settings-item-info">
-                                <h4>Email de Confirmação</h4>
-                                <p>Enviar confirmação por email</p>
+                                <h4 data-i18n="confirmationEmail">Email de Confirmação</h4>
+                                <p data-i18n="sendConfirmationEmail">Enviar confirmação por email</p>
                             </div>
                             <label class="switch">
                                 <input type="checkbox" id="emailNotifications" checked onchange="saveSetting('emailNotifications', this.checked)">
@@ -571,8 +583,8 @@
                         </div>
                         <div class="settings-item">
                             <div class="settings-item-info">
-                                <h4>SMS de Lembrete</h4>
-                                <p>Enviar lembrete 1h antes</p>
+                                <h4 data-i18n="smsReminder">SMS de Lembrete</h4>
+                                <p data-i18n="sendReminder1h">Enviar lembrete 1h antes</p>
                             </div>
                             <label class="switch">
                                 <input type="checkbox" id="smsNotifications" onchange="saveSetting('smsNotifications', this.checked)">
@@ -581,8 +593,8 @@
                         </div>
                         <div class="settings-item">
                             <div class="settings-item-info">
-                                <h4>WhatsApp</h4>
-                                <p>Notificações via WhatsApp</p>
+                                <h4 data-i18n="whatsapp">WhatsApp</h4>
+                                <p data-i18n="whatsappNotifications">Notificações via WhatsApp</p>
                             </div>
                             <label class="switch">
                                 <input type="checkbox" id="whatsappNotifications" onchange="saveSetting('whatsappNotifications', this.checked)">
@@ -592,20 +604,20 @@
                     </div>
                     
                     <div class="settings-card">
-                        <h3>Integrações</h3>
+                        <h3 data-i18n="integrations">Integrações</h3>
                         <div class="settings-item">
                             <div class="settings-item-info">
                                 <h4>Google Calendar</h4>
-                                <p>Sincronizar com Google</p>
+                                <p data-i18n="syncGoogle">Sincronizar com Google</p>
                             </div>
-                            <button class="btn-secondary" onclick="integrateGoogle()">Conectar</button>
+                            <button class="btn-secondary" onclick="integrateGoogle()" data-i18n="connect">Conectar</button>
                         </div>
                         <div class="settings-item">
                             <div class="settings-item-info">
-                                <h4>Pagamentos Online</h4>
-                                <p>Aceitar pagamentos</p>
+                                <h4 data-i18n="onlinePayments">Pagamentos Online</h4>
+                                <p data-i18n="acceptPayments">Aceitar pagamentos</p>
                             </div>
-                            <button class="btn-secondary" onclick="setupPayments()">Configurar</button>
+                            <button class="btn-secondary" onclick="setupPayments()" data-i18n="setup">Configurar</button>
                         </div>
                     </div>
                 </div>
@@ -616,20 +628,20 @@
     <!-- MODAL GERAL -->
     <div class="modal" id="genericModal">
         <div class="modal-content">
-            <h2 id="modalTitle">Novo</h2>
+            <h2 id="modalTitle" data-i18n="new">Novo</h2>
             <div id="modalFields"></div>
             <div class="modal-actions">
-                <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
-                <button class="btn-primary" onclick="saveModal()" id="saveModalBtn">Salvar</button>
+                <button class="btn-secondary" onclick="closeModal()" data-i18n="cancel">Cancelar</button>
+                <button class="btn-primary" onclick="saveModal()" id="saveModalBtn" data-i18n="save">Salvar</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL DESIGN - NOVO -->
+    <!-- MODAL DESIGN -->
     <div class="modal" id="designModal">
         <div class="modal-content" style="max-width: 900px; max-height: 90vh;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                <h2><i class="fas fa-palette"></i> Personalizar Design</h2>
+                <h2><i class="fas fa-palette"></i> <span data-i18n="customizeDesign">Personalizar Design</span></h2>
                 <button class="btn-secondary" onclick="closeDesignModal()" style="padding: 8px 16px;">
                     <i class="fas fa-times"></i>
                 </button>
@@ -637,41 +649,41 @@
             
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 24px;">
                 <div class="color-picker-group">
-                    <label><strong>Cor Primária</strong></label>
+                    <label><strong data-i18n="primaryColor">Cor Primária</strong></label>
                     <div id="primaryColorPicker"></div>
                     <input type="text" id="primaryColorInput" readonly style="width: 100%; margin-top: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
                 </div>
                 
                 <div class="color-picker-group">
-                    <label><strong>Cor Secundária</strong></label>
+                    <label><strong data-i18n="secondaryColor">Cor Secundária</strong></label>
                     <div id="secondaryColorPicker"></div>
                     <input type="text" id="secondaryColorInput" readonly style="width: 100%; margin-top: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
                 </div>
                 
                 <div class="color-picker-group">
-                    <label><strong>Cor de Fundo</strong></label>
+                    <label><strong data-i18n="backgroundColor">Cor de Fundo</strong></label>
                     <div id="backgroundColorPicker"></div>
                     <input type="text" id="backgroundColorInput" readonly style="width: 100%; margin-top: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
                 </div>
                 
                 <div class="color-picker-group">
-                    <label><strong>Cor de Sucesso</strong></label>
+                    <label><strong data-i18n="successColor">Cor de Sucesso</strong></label>
                     <div id="successColorPicker"></div>
                     <input type="text" id="successColorInput" readonly style="width: 100%; margin-top: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
                 </div>
             </div>
 
             <div style="background: var(--bg-secondary); padding: 20px; border-radius: 12px; margin-bottom: 24px;">
-                <h4><i class="fas fa-eye"></i> Pré-visualização em Tempo Real</h4>
-                <p style="color: var(--text-secondary); margin-top: 8px;">As mudanças são aplicadas instantaneamente</p>
+                <h4><i class="fas fa-eye"></i> <span data-i18n="livePreview">Pré-visualização em Tempo Real</span></h4>
+                <p style="color: var(--text-secondary); margin-top: 8px;" data-i18n="changesAppliedInstantly">As mudanças são aplicadas instantaneamente</p>
             </div>
 
             <div class="modal-actions" style="justify-content: space-between;">
                 <button class="btn-secondary" onclick="resetDesignColors()">
-                    <i class="fas fa-undo"></i> Resetar Padrão
+                    <i class="fas fa-undo"></i> <span data-i18n="resetDefault">Resetar Padrão</span>
                 </button>
                 <button class="btn-primary" onclick="saveDesignColors()" style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border: none;">
-                    <i class="fas fa-save"></i> Salvar Design
+                    <i class="fas fa-save"></i> <span data-i18n="saveDesign">Salvar Design</span>
                 </button>
             </div>
         </div>
@@ -680,12 +692,12 @@
     <!-- Modal de Relatório Individual -->
     <div class="modal" id="clientReportModal">
         <div class="modal-content" style="max-width: 800px;">
-            <h2 id="clientReportTitle">Relatório do Aluno</h2>
+            <h2 id="clientReportTitle" data-i18n="studentReport">Relatório do Aluno</h2>
             <div id="clientReportContent"></div>
             <div class="modal-actions">
-                <button class="btn-secondary" onclick="closeClientReportModal()">Fechar</button>
+                <button class="btn-secondary" onclick="closeClientReportModal()" data-i18n="close">Fechar</button>
                 <button class="btn-primary" onclick="downloadClientReportPDF()" id="downloadReportBtn">
-                    <i class="fas fa-file-pdf"></i> Download PDF
+                    <i class="fas fa-file-pdf"></i> <span data-i18n="downloadPDF">Download PDF</span>
                 </button>
             </div>
         </div>
@@ -698,16 +710,15 @@
                 <div style="width: 70px; height: 70px; background: #25D366; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
                     <i class="fab fa-whatsapp" style="font-size: 36px; color: white;"></i>
                 </div>
-                <h2 style="margin-bottom: 10px;">Enviar Lembrete via WhatsApp</h2>
-                <p style="color: var(--text-secondary); margin-bottom: 15px;">Confirme os dados do agendamento</p>
+                <h2 data-i18n="sendReminderWhatsApp">Enviar Lembrete via WhatsApp</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 15px;" data-i18n="confirmAppointmentData">Confirme os dados do agendamento</p>
             </div>
             
             <div id="whatsappAppointmentInfo" style="background: var(--bg-secondary); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                <!-- Preenchido via JS -->
             </div>
             
             <div style="margin-bottom: 20px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Número do WhatsApp</label>
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;" data-i18n="whatsappNumber">Número do WhatsApp</label>
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <span style="background: var(--bg-secondary); padding: 12px 15px; border-radius: 12px; border: 1px solid var(--border);">
                         <i class="fab fa-whatsapp" style="color: #25D366;"></i>
@@ -719,18 +730,18 @@
             <div style="margin-bottom: 25px;">
                 <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
                     <input type="checkbox" id="whatsappAddMessage" onchange="toggleWhatsappMessage()">
-                    <span>Adicionar mensagem personalizada</span>
+                    <span data-i18n="addCustomMessage">Adicionar mensagem personalizada</span>
                 </label>
                 
                 <div id="whatsappCustomMessageField" style="display: none; margin-top: 15px;">
-                    <textarea id="whatsappCustomMessage" rows="3" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-primary); color: var(--text-primary); resize: vertical;" placeholder="Digite sua mensagem adicional..."></textarea>
+                    <textarea id="whatsappCustomMessage" rows="3" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-primary); color: var(--text-primary); resize: vertical;" data-i18n-placeholder="customMessage" placeholder="Digite sua mensagem adicional..."></textarea>
                 </div>
             </div>
             
             <div style="display: flex; gap: 12px;">
-                <button class="btn-secondary" onclick="closeWhatsappModal()" style="flex: 1;">Cancelar</button>
+                <button class="btn-secondary" onclick="closeWhatsappModal()" style="flex: 1;" data-i18n="cancel">Cancelar</button>
                 <button class="btn-primary" onclick="sendWhatsAppReminder()" style="flex: 1; background: #25D366; background: linear-gradient(135deg, #25D366, #128C7E);">
-                    <i class="fab fa-whatsapp"></i> Enviar Agora
+                    <i class="fab fa-whatsapp"></i> <span data-i18n="sendNow">Enviar Agora</span>
                 </button>
             </div>
         </div>
@@ -743,31 +754,28 @@
                 <div style="width: 70px; height: 70px; background: #25D366; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
                     <i class="fab fa-whatsapp" style="font-size: 36px; color: white;"></i>
                 </div>
-                <h2 style="margin-bottom: 10px;">Enviar Lembrete via WhatsApp</h2>
-                <p style="color: var(--text-secondary); margin-bottom: 15px;">Selecione o aluno para enviar o lembrete</p>
+                <h2 data-i18n="sendReminderWhatsApp">Enviar Lembrete via WhatsApp</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 15px;" data-i18n="selectStudentReminder">Selecione o aluno para enviar o lembrete</p>
             </div>
             
             <div style="margin-bottom: 20px; display: flex; gap: 10px;">
-                <input type="text" id="searchStudent" placeholder="Buscar aluno..." style="flex: 1; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-primary);" onkeyup="filterStudentList()">
+                <input type="text" id="searchStudent" data-i18n-placeholder="searchStudent" placeholder="Buscar aluno..." style="flex: 1; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-primary);" onkeyup="filterStudentList()">
             </div>
             
             <div id="whatsappStudentList" style="max-height: 400px; overflow-y: auto; margin-bottom: 20px;">
-                <!-- Lista de alunos será carregada via JavaScript -->
                 <div style="text-align: center; padding: 40px;">
                     <i class="fas fa-spinner fa-spin" style="font-size: 32px; color: var(--text-secondary);"></i>
-                    <p style="margin-top: 16px; color: var(--text-secondary);">Carregando alunos...</p>
+                    <p style="margin-top: 16px; color: var(--text-secondary);" data-i18n="loadingStudents">Carregando alunos...</p>
                 </div>
             </div>
             
             <div style="display: flex; gap: 12px;">
-                <button class="btn-secondary" onclick="closeSelectModal()" style="flex: 1;">Cancelar</button>
+                <button class="btn-secondary" onclick="closeSelectModal()" style="flex: 1;" data-i18n="cancel">Cancelar</button>
             </div>
         </div>
     </div>
-
     <script src="js/script.js"></script>
-    <script src="js/settings.js"></script>
     <script src="js/whatsapp.js"></script>
-    
+    <script src="js/idioma.js"></script>
 </body>
 </html>
