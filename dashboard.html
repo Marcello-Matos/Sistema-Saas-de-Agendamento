@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>NEXBOOK</title>
+    <title>NEXBOOK · Dashboard</title>
     
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-functions-compat.js"></script>
     
     <!-- Fonts e Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -30,6 +31,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+    <!-- Color Picker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr@latest/dist/themes/classic.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr@latest/dist/pickr.min.js"></script>
 </head>
 <body>
     <!-- Botão toggle sidebar para mobile -->
@@ -85,7 +90,7 @@
                 <h1>Dashboard Inteligente</h1>
                 <p>Visão geral do seu negócio com insights em tempo real</p>
             </div>
-            <div class="header-actions">                
+            <div class="header-actions">   
                 <div class="search-box">
                     <i class="fas fa-search"></i>
                     <input type="text" placeholder="Buscar..." id="globalSearch" onkeyup="handleGlobalSearch()">
@@ -219,11 +224,19 @@
                 <!-- Próximos agendamentos -->
                 <div class="appointments-card">
                     <div class="appointments-header">
-                        <h3>Próximos agendamentos</h3>
+                        <div style="display: flex; align-items: center;">
+                            <h3>Próximos agendamentos</h3>
+                        </div>
+                        <!-- BOTÃO ENVIAR VIA WHATSAPP - AGORA NO HEADER -->
+                <button class="btn-whatsapp-header" onclick="openWhatsAppSelectModal()">
+                    <i class="fab fa-whatsapp" style="font-size: 18px;"></i>
+                    <span>Enviar via WhatsApp</span>
+                </button>
                         <a onclick="openModal('appointment')">+ Novo agendamento</a>
                     </div>
                     <div class="appointments-list" id="appointmentsList">
-                        <!-- Será preenchido via JavaScript -->
+                        <!-- Será preenchido via JavaScript com os botões individuais -->
+                        <div class="loading-state">Carregando agendamentos...</div>
                     </div>
                 </div>
             </div>
@@ -529,6 +542,20 @@
                             <button class="btn-secondary" onclick="editSetting('sundayHours')">Editar</button>
                         </div>
                     </div>
+
+                    <!-- NOVO CARD DESIGN -->
+                    <div class="settings-card">
+                        <h3><i class="fas fa-palette"></i> Design & Cores</h3>
+                        <div class="settings-item">
+                            <div class="settings-item-info">
+                                <h4>Personalizar Cores do Sistema</h4>
+                                <p>Altere as cores principais do layout completo</p>
+                            </div>
+                            <button class="btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;" onclick="openDesignModal()">
+                                <i class="fas fa-magic"></i> DESIGN
+                            </button>
+                        </div>
+                    </div>
                     
                     <div class="settings-card">
                         <h3>Notificações</h3>
@@ -586,7 +613,7 @@
         </div>
     </div>
 
-    <!-- MODAL -->
+    <!-- MODAL GERAL -->
     <div class="modal" id="genericModal">
         <div class="modal-content">
             <h2 id="modalTitle">Novo</h2>
@@ -594,6 +621,58 @@
             <div class="modal-actions">
                 <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
                 <button class="btn-primary" onclick="saveModal()" id="saveModalBtn">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DESIGN - NOVO -->
+    <div class="modal" id="designModal">
+        <div class="modal-content" style="max-width: 900px; max-height: 90vh;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2><i class="fas fa-palette"></i> Personalizar Design</h2>
+                <button class="btn-secondary" onclick="closeDesignModal()" style="padding: 8px 16px;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 24px;">
+                <div class="color-picker-group">
+                    <label><strong>Cor Primária</strong></label>
+                    <div id="primaryColorPicker"></div>
+                    <input type="text" id="primaryColorInput" readonly style="width: 100%; margin-top: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+                </div>
+                
+                <div class="color-picker-group">
+                    <label><strong>Cor Secundária</strong></label>
+                    <div id="secondaryColorPicker"></div>
+                    <input type="text" id="secondaryColorInput" readonly style="width: 100%; margin-top: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+                </div>
+                
+                <div class="color-picker-group">
+                    <label><strong>Cor de Fundo</strong></label>
+                    <div id="backgroundColorPicker"></div>
+                    <input type="text" id="backgroundColorInput" readonly style="width: 100%; margin-top: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+                </div>
+                
+                <div class="color-picker-group">
+                    <label><strong>Cor de Sucesso</strong></label>
+                    <div id="successColorPicker"></div>
+                    <input type="text" id="successColorInput" readonly style="width: 100%; margin-top: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+                </div>
+            </div>
+
+            <div style="background: var(--bg-secondary); padding: 20px; border-radius: 12px; margin-bottom: 24px;">
+                <h4><i class="fas fa-eye"></i> Pré-visualização em Tempo Real</h4>
+                <p style="color: var(--text-secondary); margin-top: 8px;">As mudanças são aplicadas instantaneamente</p>
+            </div>
+
+            <div class="modal-actions" style="justify-content: space-between;">
+                <button class="btn-secondary" onclick="resetDesignColors()">
+                    <i class="fas fa-undo"></i> Resetar Padrão
+                </button>
+                <button class="btn-primary" onclick="saveDesignColors()" style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border: none;">
+                    <i class="fas fa-save"></i> Salvar Design
+                </button>
             </div>
         </div>
     </div>
@@ -612,7 +691,83 @@
         </div>
     </div>
     
+    <!-- Modal de Confirmação WhatsApp -->
+    <div class="modal" id="whatsappConfirmModal">
+        <div class="modal-content" style="max-width: 450px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <div style="width: 70px; height: 70px; background: #25D366; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                    <i class="fab fa-whatsapp" style="font-size: 36px; color: white;"></i>
+                </div>
+                <h2 style="margin-bottom: 10px;">Enviar Lembrete via WhatsApp</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 15px;">Confirme os dados do agendamento</p>
+            </div>
+            
+            <div id="whatsappAppointmentInfo" style="background: var(--bg-secondary); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+                <!-- Preenchido via JS -->
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Número do WhatsApp</label>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="background: var(--bg-secondary); padding: 12px 15px; border-radius: 12px; border: 1px solid var(--border);">
+                        <i class="fab fa-whatsapp" style="color: #25D366;"></i>
+                    </span>
+                    <span id="whatsappPhoneNumber" style="font-weight: 500;">(11) 99999-9999</span>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 25px;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="whatsappAddMessage" onchange="toggleWhatsappMessage()">
+                    <span>Adicionar mensagem personalizada</span>
+                </label>
+                
+                <div id="whatsappCustomMessageField" style="display: none; margin-top: 15px;">
+                    <textarea id="whatsappCustomMessage" rows="3" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-primary); color: var(--text-primary); resize: vertical;" placeholder="Digite sua mensagem adicional..."></textarea>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 12px;">
+                <button class="btn-secondary" onclick="closeWhatsappModal()" style="flex: 1;">Cancelar</button>
+                <button class="btn-primary" onclick="sendWhatsAppReminder()" style="flex: 1; background: #25D366; background: linear-gradient(135deg, #25D366, #128C7E);">
+                    <i class="fab fa-whatsapp"></i> Enviar Agora
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Seleção de Alunos WhatsApp -->
+    <div class="modal" id="whatsappSelectModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <div style="width: 70px; height: 70px; background: #25D366; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                    <i class="fab fa-whatsapp" style="font-size: 36px; color: white;"></i>
+                </div>
+                <h2 style="margin-bottom: 10px;">Enviar Lembrete via WhatsApp</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 15px;">Selecione o aluno para enviar o lembrete</p>
+            </div>
+            
+            <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+                <input type="text" id="searchStudent" placeholder="Buscar aluno..." style="flex: 1; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-primary);" onkeyup="filterStudentList()">
+            </div>
+            
+            <div id="whatsappStudentList" style="max-height: 400px; overflow-y: auto; margin-bottom: 20px;">
+                <!-- Lista de alunos será carregada via JavaScript -->
+                <div style="text-align: center; padding: 40px;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 32px; color: var(--text-secondary);"></i>
+                    <p style="margin-top: 16px; color: var(--text-secondary);">Carregando alunos...</p>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 12px;">
+                <button class="btn-secondary" onclick="closeSelectModal()" style="flex: 1;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="js/script.js"></script>
     <script src="js/settings.js"></script>
+    <script src="js/whatsapp.js"></script>
+    
 </body>
 </html>

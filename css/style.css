@@ -2841,3 +2841,130 @@ body.dark-theme .form-group input[type="date"]::-webkit-calendar-picker-indicato
         scroll-behavior: auto !important;
     }
 }
+
+ /* Estilos adicionais para os botões de WhatsApp */
+        .whatsapp-btn {
+            background: transparent;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .whatsapp-btn:hover {
+            background: rgba(37, 211, 102, 0.1);
+            transform: scale(1.1);
+        }
+        
+        .appointment-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .btn-icon {
+            background: transparent;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+        }
+        
+        .btn-icon:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        /* Estilo do botão WhatsApp no header */
+        .btn-whatsapp-header {
+            background: #25D366;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-right: 10px;
+            height: 40px;
+        }
+        
+        .btn-whatsapp-header:hover {
+            background: #128C7E;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(37, 211, 102, 0.3);
+        }
+        
+        /* Estilo dos cards de alunos no modal */
+        .student-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--bg-primary);
+        }
+        
+        .student-card:hover {
+            background: var(--bg-secondary);
+            border-color: #25D366;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .student-avatar {
+            width: 48px;
+            height: 48px;
+            background: #25D366;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .student-info {
+            flex: 1;
+            margin-left: 15px;
+        }
+        
+        .student-name {
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        
+        .student-details {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        
+        .student-phone {
+            font-size: 12px;
+            color: #25D366;
+            margin-top: 4px;
+        }
+        
+        .student-phone i {
+            margin-right: 4px;
+        }
