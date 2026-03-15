@@ -162,11 +162,19 @@ async function openWhatsAppSelectModal() {
             }
             
             // Formatar data
-            const dateObj = new Date(appointment.date + 'T12:00:00');
-            const formattedDate = dateObj.toLocaleDateString('pt-BR', { 
-                day: '2-digit', 
-                month: '2-digit' 
-            });
+            let formattedDate = '';
+            if (appointment.date) {
+                if (typeof appointment.date === 'string') {
+                    const [year, month, day] = appointment.date.split('-');
+                    formattedDate = `${day}/${month}`;
+                } else if (appointment.date.toDate) {
+                    const dateObj = appointment.date.toDate();
+                    formattedDate = dateObj.toLocaleDateString('pt-BR', { 
+                        day: '2-digit', 
+                        month: '2-digit' 
+                    });
+                }
+            }
             
             // Criar card do aluno
             const card = document.createElement('div');
@@ -320,26 +328,44 @@ function displayAppointmentInfo(appointment, client) {
     
     if (!infoDiv || !phoneSpan) return;
     
-    // Formatar data
-    let appointmentDate;
-    if (appointment.date?.toDate) {
-        appointmentDate = appointment.date.toDate();
-    } else if (appointment.date) {
-        appointmentDate = new Date(appointment.date);
+    // CORREÇÃO: Formatar data corretamente
+    let formattedDate = '';
+    let formattedTime = '';
+    
+    // Processar a data
+    if (appointment.date) {
+        // Se for Timestamp do Firebase
+        if (appointment.date.toDate) {
+            const dateObj = appointment.date.toDate();
+            formattedDate = dateObj.toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        } 
+        // Se for string no formato YYYY-MM-DD
+        else if (typeof appointment.date === 'string') {
+            const [year, month, day] = appointment.date.split('-');
+            formattedDate = `${day}/${month}/${year}`;
+        }
+        // Se for objeto Date
+        else if (appointment.date instanceof Date) {
+            formattedDate = appointment.date.toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        }
     } else {
-        appointmentDate = new Date();
+        formattedDate = 'Data não informada';
     }
     
-    const formattedDate = appointmentDate.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
-    
-    const formattedTime = appointmentDate.toLocaleTimeString('pt-BR', {
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+    // CORREÇÃO: Usar appointment.time para o horário
+    if (appointment.time) {
+        formattedTime = appointment.time;
+    } else {
+        formattedTime = '--:--';
+    }
     
     // Formatar telefone
     const formattedPhone = formatPhoneNumber(client.phone);
@@ -385,7 +411,7 @@ function displayAppointmentInfo(appointment, client) {
 }
 
 /* ============================================
-   ENVIAR LEMBRETE VIA WHATSAPP
+   ENVIAR LEMBRETE VIA WHATSAPP (VERSÃO CORRIGIDA - EMOJIS UNIVERSAIS)
    ============================================ */
 async function sendWhatsAppReminder() {
     if (!currentAppointmentForWhatsapp || !currentClientForWhatsapp) {
@@ -405,24 +431,39 @@ async function sendWhatsAppReminder() {
             return;
         }
         
-        // Formatar data
-        let appointmentDate;
-        if (appointment.date?.toDate) {
-            appointmentDate = appointment.date.toDate();
+        // CORREÇÃO: Formatar data corretamente
+        let formattedDate = '';
+        let formattedTime = '';
+        
+        // Processar a data
+        if (appointment.date) {
+            if (appointment.date.toDate) {
+                const dateObj = appointment.date.toDate();
+                formattedDate = dateObj.toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+            } else if (typeof appointment.date === 'string') {
+                const [year, month, day] = appointment.date.split('-');
+                formattedDate = `${day}/${month}/${year}`;
+            } else if (appointment.date instanceof Date) {
+                formattedDate = appointment.date.toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+            }
         } else {
-            appointmentDate = new Date(appointment.date || new Date());
+            formattedDate = 'Data não informada';
         }
         
-        const formattedDate = appointmentDate.toLocaleDateString('pt-BR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
-        
-        const formattedTime = appointmentDate.toLocaleTimeString('pt-BR', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        // CORREÇÃO: Usar appointment.time para o horário
+        if (appointment.time) {
+            formattedTime = appointment.time;
+        } else {
+            formattedTime = '--:--';
+        }
         
         // Verificar mensagem personalizada
         const addMessage = document.getElementById('whatsappAddMessage');
@@ -438,34 +479,62 @@ async function sendWhatsAppReminder() {
         const professionalName = appointment.professionalName || appointment.professional || 'profissional';
         const clientName = client.name || client.displayName || 'aluno';
         
-        // Construir mensagem
-       // Construir mensagem (VERSÃO CORRIGIDA - SEM QUADRADOS)
-        let message = `Olá *${clientName}*! \n\n`;
-        message += ` *LEMBRETE DE AGENDAMENTO*\n\n`;
-        message += ` *Data:* ${formattedDate}\n`;
-        message += ` *Horário:* ${formattedTime}\n`;
-        message += ` *Serviço:* ${serviceName}\n`;
-        message += ` *Profissional:* ${professionalName}\n\n`;
-        message += ` Por favor, confirme sua presença!\n`;
+        // VERSÃO 1: Usando apenas caracteres especiais (100% compatível)
+        let message = `Olá ${clientName}!\n\n`;
+        message += `LEMBRETE DE AGENDAMENTO\n`;
+        message += `-----------------------\n\n`;
+        message += `Data: ${formattedDate}\n`;
+        message += `Horário: ${formattedTime}\n`;
+        message += `Serviço: ${serviceName}\n`;
+        message += `Profissional: ${professionalName}\n\n`;
+        message += `Por favor confirme sua presença.\n`;
+        message += `Qualquer dúvida estamos à disposição.\n\n`;
+        message += `NEXBOOK`;
+        
+        // VERSÃO 2: Alternativa sem emojis (usando apenas texto)
+        /*
+        let message = `Olá *${clientName}*!\n\n`;
+        message += `*LEMBRETE DE AGENDAMENTO*\n`;
+        message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+        message += `🗓️ DATA: ${formattedDate}\n`;
+        message += `⏱️ HORÁRIO: ${formattedTime}\n`;
+        message += `✂️ SERVIÇO: ${serviceName}\n`;
+        message += `👤 PROFISSIONAL: ${professionalName}\n\n`;
+        message += `👉 Por favor, confirme sua presença!\n`;
         message += `Qualquer dúvida, estamos à disposição.\n\n`;
-        message += `*NEXBOOK* `;
+        message += `📱 NEXBOOK`;
+        */
+        
+        // VERSÃO 3: Apenas texto (compatibilidade máxima)
+        /*
+        let message = `Olá ${clientName}!\n\n`;
+        message += `LEMBRETE DE AGENDAMENTO\n`;
+        message += `------------------------\n\n`;
+        message += `Data: ${formattedDate}\n`;
+        message += `Horário: ${formattedTime}\n`;
+        message += `Serviço: ${serviceName}\n`;
+        message += `Profissional: ${professionalName}\n\n`;
+        message += `Por favor, confirme sua presença!\n`;
+        message += `Qualquer dúvida, estamos à disposição.\n\n`;
+        message += `NEXBOOK`;
+        */
         
         // Adicionar mensagem personalizada
         if (customMessage) {
             message += `\n\n💬 *Mensagem adicional:*\n${customMessage}`;
         }
         
-        // Limpar número
+        // Limpar número (remover tudo que não é dígito)
         let phoneNumber = client.phone.replace(/\D/g, '');
         
-        // Adicionar código do Brasil
-        if (phoneNumber.length === 11) {
+        // Adicionar código do Brasil (55) se necessário
+        if (phoneNumber.length === 11) { // Celular com DDD (11 dígitos)
             phoneNumber = '55' + phoneNumber;
-        } else if (phoneNumber.length === 10) {
+        } else if (phoneNumber.length === 10) { // Telefone fixo com DDD (10 dígitos)
             phoneNumber = '55' + phoneNumber;
-        } else if (phoneNumber.length === 9) {
+        } else if (phoneNumber.length === 9) { // Celular sem DDD (9 dígitos)
             phoneNumber = '5511' + phoneNumber;
-        } else if (phoneNumber.length === 8) {
+        } else if (phoneNumber.length === 8) { // Telefone fixo sem DDD (8 dígitos)
             phoneNumber = '5511' + phoneNumber;
         }
         
@@ -488,7 +557,6 @@ async function sendWhatsAppReminder() {
         showLoading(false);
     }
 }
-
 /* ============================================
    FORMATAR TELEFONE
    ============================================ */
