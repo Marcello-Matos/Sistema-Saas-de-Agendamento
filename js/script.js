@@ -3283,7 +3283,7 @@ function logout() {
 }
 
 // ============================================
-// NAVEGAÇÃO
+// NAVEGAÇÃO6
 // ============================================
 document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', function() {
