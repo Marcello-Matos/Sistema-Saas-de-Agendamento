@@ -2414,5 +2414,3 @@ body.dark-theme .form-group input[type="date"]::-webkit-calendar-picker-indicato
 .content::-webkit-scrollbar-thumb:hover {
     background: var(--primary-dark);
 }
-
-
