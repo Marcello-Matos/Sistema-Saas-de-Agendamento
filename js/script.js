@@ -4034,7 +4034,7 @@ auth.onAuthStateChanged(async user => {
         currentUser = user;
         currentUserId = user.uid;
 
-        const temAcesso = await checkUserPlan();
+        
         if (temAcesso) {
             document.querySelector('.main').style.display = 'flex';
             document.querySelector('.sidebar').style.display = 'flex';

@@ -1,22 +1,4 @@
-    // ============================================
-// VERIFICAÇÃO DA TELA DE INTRODUÇÃO
-// ============================================
-(function() {
-    // Verifica se já viu a introdução nesta sessão
-    const jaViuIntro = sessionStorage.getItem('jaViuIntro');
-    
-    console.log('🔍 Verificando introdução:', jaViuIntro ? 'Já viu' : 'Primeira vez');
-    
-    // Se NÃO viu a introdução nesta sessão, redireciona para introdução
-    if (!jaViuIntro) {
-        console.log('🔄 Redirecionando para introdução...');
-        window.location.href = 'introducao.html';
-        return; // IMPORTANTE: para a execução aqui
-    }
-    
-    console.log('✅ Prosseguindo para login');
-})();
-    
+
     
     /* ══════════════════════════════════════════
        FIREBASE CONFIGURATION
