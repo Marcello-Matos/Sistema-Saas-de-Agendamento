@@ -833,10 +833,10 @@ function calculateProjectedRevenue(clients, appointments) {
     
     // Calcular média mensal
     let avulsoTotal = 0;
-    const avulsoPromises = recentAvulsoAppointments.map(async apt => {
+    for (const apt of recentAvulsoAppointments) {
         if (apt.serviceId) {
             try {
-                const serviceDoc = await db.collection('services').doc(apt.serviceId).get();
+                const serviceDoc = db.collection('services').doc(apt.serviceId).get();
                 if (serviceDoc.exists) {
                     avulsoTotal += serviceDoc.data().price || 0;
                 }
@@ -844,10 +844,7 @@ function calculateProjectedRevenue(clients, appointments) {
                 console.warn('Erro ao calcular projeção de avulso:', e);
             }
         }
-    });
-    
-    // Como é síncrono, vamos calcular de forma síncrona (valores já devem estar no cache)
-    // Na prática, os valores dos serviços já foram carregados antes
+    }
     
     // Adicionar projeção de avulsos (média mensal * 12)
     if (recentAvulsoAppointments.length > 0) {
@@ -3283,7 +3280,7 @@ function logout() {
 }
 
 // ============================================
-// NAVEGAÇÃO6
+// NAVEGAÇÃO
 // ============================================
 document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', function() {
@@ -4028,29 +4025,62 @@ async function checkUserPlan() {
     }
 }
 
-// ✅ ÚNICO auth.onAuthStateChanged — VERSÃO FINAL COMPLETA
+// ✅ ÚNICO auth.onAuthStateChanged — CORRIGIDO (REMOVI O temAcesso)
 auth.onAuthStateChanged(async user => {
+    console.log('🔄 Auth state changed:', user ? 'Logado' : 'Deslogado');
+    
     if (user) {
+        console.log('✅ Usuário autenticado:', {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName
+        });
+        
         currentUser = user;
         currentUserId = user.uid;
-
         
-        if (temAcesso) {
-            document.querySelector('.main').style.display = 'flex';
-            document.querySelector('.sidebar').style.display = 'flex';
+        try {
+            // Mostrar interface
+            const mainElement = document.querySelector('.main');
+            const sidebarElement = document.querySelector('.sidebar');
+            
+            if (mainElement) mainElement.style.display = 'flex';
+            if (sidebarElement) sidebarElement.style.display = 'flex';
+            
+            // Atualizar interface do usuário
             updateUserInterface(user);
-            loadAllData();
+            
+            // CARREGAR TODOS OS DADOS
+            console.log('📥 Carregando dados do Firebase...');
+            await loadAllData();
+            
+            // Inicializar calendário
+            console.log('📅 Inicializando calendário...');
             initializeCalendar();
-            adjustTablesForMobile(); // ← vinha do 1º listener, manter aqui
-            loadSavedColors();       // ← vinha do 1º listener, manter aqui
+            
+            // Ajustes de responsividade
+            adjustTablesForMobile();
+            
+            // Carregar cores
+            loadSavedColors();
+            
+            console.log('✅ Sistema inicializado com sucesso!');
+            
+            // Mostrar notificação de boas-vindas
+            showNotification(`Bem-vindo, ${user.displayName || user.email}!`, 'success');
+            
+        } catch (error) {
+            console.error('❌ Erro ao carregar dados:', error);
+            showNotification('Erro ao carregar dados. Tente recarregar a página.', 'error');
         }
+        
     } else {
-        currentUser = null;          // ← vinha do 1º listener, manter aqui
-        currentUserId = null;        // ← vinha do 1º listener, manter aqui
+        console.log('👋 Usuário não autenticado, redirecionando para login...');
+        currentUser = null;
+        currentUserId = null;
         window.location.href = 'index.html';
     }
 });
-
 
 function hasFeature(feature) {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
