@@ -302,7 +302,9 @@ const defaultColors = {
     danger: '#ef4444',
     warning: '#f59e0b',
     text: '#1f2937',
-    textLight: '#6b7280'
+    textLight: '#6b7280',
+    totalpass: '#D91828',
+    wellhub: '#D91414'
 };
 
 // Validar formato hexadecimal
@@ -341,7 +343,9 @@ function applyColorsToCSS(colors) {
         danger: defaultColors.danger,
         warning: defaultColors.warning,
         text: defaultColors.text,
-        textLight: defaultColors.textLight
+        textLight: defaultColors.textLight,
+        totalpass: colors.totalpass || defaultColors.totalpass,
+        wellhub: colors.wellhub || defaultColors.wellhub
     };
     
     const root = document.documentElement;
@@ -361,6 +365,10 @@ function applyColorsToCSS(colors) {
     root.style.setProperty('--success', safeColors.success);
     root.style.setProperty('--danger', safeColors.danger);
     root.style.setProperty('--warning', safeColors.warning);
+    
+    // Cores específicas para badges
+    root.style.setProperty('--totalpass', safeColors.totalpass);
+    root.style.setProperty('--wellhub', safeColors.wellhub);
     
     // Salvar no localStorage
     localStorage.setItem('nexbook_colors', JSON.stringify(safeColors));
@@ -397,7 +405,11 @@ function isColorLight(hex) {
     return brightness > 128;
 }
 
-// Abrir modal de design (mantido similar, com validações)
+// ============================================
+// FUNÇÕES DO MODAL DE DESIGN (COMPLETAS)
+// ============================================
+
+// Abrir modal de design
 function openDesignModal() {
     const modal = document.getElementById('designModal');
     if (!modal) return;
@@ -406,13 +418,145 @@ function openDesignModal() {
     
     modal.style.display = 'flex';
     
-    // Inicializar color pickers (código mantido, mas seguro)
+    // Inicializar color pickers
     setTimeout(() => {
-        // ... código dos pickers mantido igual, mas com validações ...
-        // (espaço economizado por ser extenso, mas manteremos igual)
+        // Primary Color
+        if (!primaryPicker) {
+            primaryPicker = Pickr.create({
+                el: '#primaryColorPicker',
+                theme: 'classic',
+                default: currentColors.primary,
+                components: {
+                    preview: true,
+                    opacity: false,
+                    hue: true,
+                    interaction: {
+                        hex: true,
+                        rgba: false,
+                        hsla: false,
+                        hsva: false,
+                        cmyk: false,
+                        input: true,
+                        clear: false,
+                        save: true
+                    }
+                }
+            });
+            
+            primaryPicker.on('save', (color) => {
+                const hex = color.toHEXA().toString();
+                document.getElementById('primaryColorInput').value = hex;
+                updateColor('primary', hex);
+            });
+        } else {
+            primaryPicker.setColor(currentColors.primary);
+        }
+        
+        // Secondary Color
+        if (!secondaryPicker) {
+            secondaryPicker = Pickr.create({
+                el: '#secondaryColorPicker',
+                theme: 'classic',
+                default: currentColors.secondary,
+                components: {
+                    preview: true,
+                    opacity: false,
+                    hue: true,
+                    interaction: {
+                        hex: true,
+                        rgba: false,
+                        hsla: false,
+                        hsva: false,
+                        cmyk: false,
+                        input: true,
+                        clear: false,
+                        save: true
+                    }
+                }
+            });
+            
+            secondaryPicker.on('save', (color) => {
+                const hex = color.toHEXA().toString();
+                document.getElementById('secondaryColorInput').value = hex;
+                updateColor('secondary', hex);
+            });
+        } else {
+            secondaryPicker.setColor(currentColors.secondary);
+        }
+        
+        // Background Color
+        if (!backgroundPicker) {
+            backgroundPicker = Pickr.create({
+                el: '#backgroundColorPicker',
+                theme: 'classic',
+                default: currentColors.background,
+                components: {
+                    preview: true,
+                    opacity: false,
+                    hue: true,
+                    interaction: {
+                        hex: true,
+                        rgba: false,
+                        hsla: false,
+                        hsva: false,
+                        cmyk: false,
+                        input: true,
+                        clear: false,
+                        save: true
+                    }
+                }
+            });
+            
+            backgroundPicker.on('save', (color) => {
+                const hex = color.toHEXA().toString();
+                document.getElementById('backgroundColorInput').value = hex;
+                updateColor('background', hex);
+            });
+        } else {
+            backgroundPicker.setColor(currentColors.background);
+        }
+        
+        // Success Color
+        if (!successPicker) {
+            successPicker = Pickr.create({
+                el: '#successColorPicker',
+                theme: 'classic',
+                default: currentColors.success,
+                components: {
+                    preview: true,
+                    opacity: false,
+                    hue: true,
+                    interaction: {
+                        hex: true,
+                        rgba: false,
+                        hsla: false,
+                        hsva: false,
+                        cmyk: false,
+                        input: true,
+                        clear: false,
+                        save: true
+                    }
+                }
+            });
+            
+            successPicker.on('save', (color) => {
+                const hex = color.toHEXA().toString();
+                document.getElementById('successColorInput').value = hex;
+                updateColor('success', hex);
+            });
+        } else {
+            successPicker.setColor(currentColors.success);
+        }
+        
+        // Atualizar inputs
+        document.getElementById('primaryColorInput').value = currentColors.primary;
+        document.getElementById('secondaryColorInput').value = currentColors.secondary;
+        document.getElementById('backgroundColorInput').value = currentColors.background;
+        document.getElementById('successColorInput').value = currentColors.success;
     }, 100);
 }
 
+// Fechar modal de design
 function closeDesignModal() {
     const modal = document.getElementById('designModal');
     if (modal) {
@@ -1125,6 +1269,7 @@ function updateClientsTable(clients) {
             }
         }
         
+        const colors = loadSavedColors();
         const origemClass = safeOrigin === 'Total Pass' ? 'badge-totalpass' : 
                            (safeOrigin === 'Well Hub' ? 'badge-wellhub' : '');
         
@@ -1164,7 +1309,7 @@ function updateClientsTable(clients) {
             <td data-label="Email">${safeEmail}</td>
             <td data-label="Telefone">${safePhone}</td>
             <td data-label="Plano">${safePlan}</td>
-            <td data-label="Origem"><span class="badge ${origemClass}">${safeOrigin}</span></td>
+            <td data-label="Origem"><span class="badge" style="background: ${safeOrigin === 'Total Pass' ? colors.totalpass : (safeOrigin === 'Well Hub' ? colors.wellhub : '#6b7280')};">${safeOrigin}</span></td>
             <td data-label="Valor">${valorPlano}</td>
             <td data-label="Data Início"><span class="start-date-badge"><i class="fas fa-calendar-alt"></i> ${dataInicioFormatada}</span></td>
             <td data-label="Cidade">${safeCity}</td>
@@ -3556,8 +3701,8 @@ function updateReportsCharts(appointments, clients) {
             reportsPieChart.updateOptions({
                 labels: originLabels,
                 colors: originLabels.map(label => 
-                    label === 'Total Pass' ? colors.primary : 
-                    label === 'Well Hub' ? colors.success : colors.warning
+                    label === 'Total Pass' ? colors.totalpass : 
+                    label === 'Well Hub' ? colors.wellhub : colors.warning
                 )
             });
             reportsPieChart.updateSeries(originData);
@@ -3637,6 +3782,7 @@ async function updateReportClientsList(clients, appointments) {
             services[doc.id] = doc.data();
         });
         
+        const colors = loadSavedColors();
         const clientRows = await Promise.all(clients.map(async client => {
             const clientAppointments = appointments.filter(a => a.clientId === client.id);
             const total = clientAppointments.length;
@@ -3676,7 +3822,7 @@ async function updateReportClientsList(clients, appointments) {
                 <tr>
                     <td data-label="Nome">${safeName}</td>
                     <td data-label="Plano">${safePlan}</td>
-                    <td data-label="Origem"><span class="badge ${origemClass}">${safeOrigin}</span></td>
+                    <td data-label="Origem"><span class="badge" style="background: ${safeOrigin === 'Total Pass' ? colors.totalpass : (safeOrigin === 'Well Hub' ? colors.wellhub : '#6b7280')};">${safeOrigin}</span></td>
                     <td data-label="Data Início"><span class="start-date-badge"><i class="fas fa-calendar-alt"></i> ${dataInicioFormatada}</span></td>
                     <td data-label="Agendamentos">${total}</td>
                     <td data-label="Comparecimentos">${attended}</td>
