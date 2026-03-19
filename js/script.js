@@ -15,11 +15,28 @@ const firebaseConfig = {
 // CONSTANTES DE SEGURANÇA
 // ============================================
 const IS_DEVELOPMENT = window.location.hostname === 'localhost' || 
-                       window.location.hostname.includes('vercel.app');
+                       window.location.hostname.includes('vercel.app') ||
+                       window.location.hostname.includes('127.0.0.1');
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+// ============================================
+// 🔥 CONSTANTES DE PROTEÇÃO AVANÇADA
+// ============================================
+const SECURITY_LEVEL = 'MAXIMUM';
+const DISABLE_DEVTOOLS = true;
+const MAX_REQUEST_RETRY = 3;
+const REQUEST_TIMEOUT = 10000; // 10 segundos
+const SESSION_CHECK_INTERVAL = 30000; // 30 segundos
+const MAX_INACTIVITY_TIME = 30 * 60 * 1000; // 30 minutos
+const ALLOWED_PAGES = ['index.html', 'login.html', 'register.html', 'recuperar-senha.html'];
+const PROTECTED_PAGES = ['dashboard.html', 'dashboard', ''];
+
+// 🔥 Constantes para proteção adicional
+const CSRF_TOKEN_KEY = 'nexbook_csrf';
+const MAX_REQUESTS_PER_MINUTE = 100;
 
 // ============================================
 // VARIÁVEIS GLOBAIS
@@ -38,11 +55,21 @@ let globalSearchTerm = '';
 // Variáveis para os color pickers
 let primaryPicker, secondaryPicker, backgroundPicker, successPicker;
 
-// Cache com tempo de expiração
+// 🔥 VARIÁVEIS DE SEGURANÇA
+let securityCheckPassed = false;
+let devToolsDetected = false;
+let requestCount = 0;
+let lastRequestTime = Date.now();
+let sessionCheckTimer = null;
+let lastActivityTime = Date.now();
+let csrfToken = null;
+
+// 🔥 Cache com tempo de expiração
 const cache = {
     clients: { data: new Map(), timestamp: 0 },
     services: { data: new Map(), timestamp: 0 },
     professionals: { data: new Map(), timestamp: 0 },
+    appointments: { data: new Map(), timestamp: 0 },
     
     isExpired(type) {
         const item = this[type];
@@ -50,7 +77,7 @@ const cache = {
     },
     
     set(type, data) {
-        if (type === 'clients' || type === 'services' || type === 'professionals') {
+        if (this[type]) {
             this[type].data = data;
             this[type].timestamp = Date.now();
         }
@@ -67,9 +94,18 @@ const cache = {
         this.clients.data.clear();
         this.services.data.clear();
         this.professionals.data.clear();
+        this.appointments.data.clear();
         this.clients.timestamp = 0;
         this.services.timestamp = 0;
         this.professionals.timestamp = 0;
+        this.appointments.timestamp = 0;
+    },
+    
+    clearType(type) {
+        if (this[type]) {
+            this[type].data.clear();
+            this[type].timestamp = 0;
+        }
     }
 };
 
@@ -82,8 +118,14 @@ try {
     db = firebase.firestore();
     storage = firebase.storage();
     
-    // Configurar Firestore para persistência offline (opcional)
-    db.enablePersistence()
+    // Configurar Firestore para usar cache (substitui enablePersistence)
+    db.settings({
+        cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED,
+        ignoreUndefinedProperties: true
+    });
+    
+    // Habilitar persistência offline (nova forma)
+    firebase.firestore().enablePersistence()
         .catch(err => {
             if (err.code === 'failed-precondition') {
                 console.warn('Persistência offline falhou - múltiplas abas abertas');
@@ -99,24 +141,480 @@ try {
 }
 
 // ============================================
-// FUNÇÕES DE SEGURANÇA E UTILITÁRIOS
+// 🔥 CLASSE DE SEGURANÇA PARA FIREBASE SDK
+// ============================================
+class SecureFirebase {
+    constructor() {
+        this.operationQueue = [];
+        this.processingQueue = false;
+    }
+
+    /**
+     * Gera token CSRF
+     */
+    generateCsrfToken() {
+        const token = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
+        localStorage.setItem(CSRF_TOKEN_KEY, token);
+        return token;
+    }
+
+    /**
+     * Obtém token CSRF
+     */
+    getCsrfToken() {
+        let token = localStorage.getItem(CSRF_TOKEN_KEY);
+        if (!token) {
+            token = this.generateCsrfToken();
+        }
+        return token;
+    }
+
+    /**
+     * Verifica se o usuário tem permissão para acessar um documento
+     */
+    async verifyDocumentPermission(collection, docId, operation = 'read') {
+        if (!currentUserId) {
+            throw new Error('Usuário não autenticado');
+        }
+
+        try {
+            const docRef = db.collection(collection).doc(docId);
+            const doc = await docRef.get();
+
+            if (!doc.exists) {
+                throw new Error('Documento não encontrado');
+            }
+
+            const data = doc.data();
+            
+            // 🔥 Verificação multi-tenant
+            if (data.userId && data.userId !== currentUserId) {
+                // Log de tentativa de acesso não autorizado
+                this.logSecurityEvent('unauthorized_access', {
+                    collection,
+                    docId,
+                    attemptedUserId: currentUserId,
+                    ownerUserId: data.userId
+                });
+                throw new Error('Acesso negado a este documento');
+            }
+
+            return { doc, data };
+        } catch (error) {
+            secureLog('Erro na verificação de permissão:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Executa operação com verificação de segurança
+     */
+    async secureOperation(operation, ...args) {
+        // Verificações de segurança
+        if (devToolsDetected) {
+            throw new Error('Acesso negado por questões de segurança');
+        }
+
+        if (!this.checkRateLimit()) {
+            throw new Error('Muitas requisições. Tente novamente mais tarde.');
+        }
+
+        // Registrar atividade
+        registerActivity();
+
+        // Adicionar à fila
+        return new Promise((resolve, reject) => {
+            this.operationQueue.push({
+                operation,
+                args,
+                resolve,
+                reject
+            });
+            this.processQueue();
+        });
+    }
+
+    /**
+     * Processa fila de operações
+     */
+    async processQueue() {
+        if (this.processingQueue) return;
+        this.processingQueue = true;
+
+        while (this.operationQueue.length > 0) {
+            const item = this.operationQueue.shift();
+            try {
+                // Executar com timeout
+                const result = await Promise.race([
+                    item.operation(...item.args),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Timeout na operação')), REQUEST_TIMEOUT)
+                    )
+                ]);
+                item.resolve(result);
+            } catch (error) {
+                item.reject(error);
+            }
+        }
+
+        this.processingQueue = false;
+    }
+
+    /**
+     * Rate limiting
+     */
+    checkRateLimit() {
+        const now = Date.now();
+        const timeWindow = 60000; // 1 minuto
+        const maxRequests = MAX_REQUESTS_PER_MINUTE;
+
+        if (now - lastRequestTime > timeWindow) {
+            requestCount = 0;
+            lastRequestTime = now;
+        }
+
+        requestCount++;
+
+        if (requestCount > maxRequests) {
+            this.logSecurityEvent('rate_limit_exceeded', { requestCount });
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Log de eventos de segurança
+     */
+    async logSecurityEvent(eventType, details = {}) {
+        if (!currentUserId) return;
+
+        try {
+            const eventData = {
+                userId: currentUserId,
+                eventType,
+                details: JSON.stringify(details),
+                userAgent: navigator.userAgent,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                url: window.location.href
+            };
+
+            // Tentar salvar log (falha silenciosa)
+            await db.collection('security_logs').add(eventData).catch(() => {});
+        } catch (error) {
+            // Silencioso
+        }
+    }
+
+    // ============================================
+    // 🔥 MÉTODOS SEGUROS PARA CRUD
+    // ============================================
+
+    /**
+     * Buscar coleção com filtro por usuário
+     */
+    async getCollection(collectionName) {
+        return this.secureOperation(async () => {
+            const snapshot = await db.collection(collectionName)
+                .where('userId', '==', currentUserId)
+                .get();
+
+            const results = [];
+            snapshot.forEach(doc => {
+                results.push({ id: doc.id, ...doc.data() });
+            });
+
+            // Atualizar cache
+            cache.set(collectionName, results);
+
+            return results;
+        });
+    }
+
+    /**
+     * Buscar documento específico
+     */
+    async getDocument(collectionName, docId) {
+        return this.secureOperation(async () => {
+            const { data } = await this.verifyDocumentPermission(collectionName, docId);
+            return { id: docId, ...data };
+        });
+    }
+
+    /**
+     * Criar documento
+     */
+    async createDocument(collectionName, data) {
+        return this.secureOperation(async () => {
+            // 🔥 Forçar userId do usuário atual
+            const secureData = {
+                ...data,
+                userId: currentUserId,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            const docRef = await db.collection(collectionName).add(secureData);
+            const newDoc = await docRef.get();
+
+            // Invalidar cache
+            cache.clearType(collectionName);
+
+            return { id: docRef.id, ...newDoc.data() };
+        });
+    }
+
+    /**
+     * Atualizar documento
+     */
+    async updateDocument(collectionName, docId, data) {
+        return this.secureOperation(async () => {
+            // Verificar permissão antes de atualizar
+            await this.verifyDocumentPermission(collectionName, docId, 'update');
+
+            const secureData = {
+                ...data,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            await db.collection(collectionName).doc(docId).update(secureData);
+            
+            // Invalidar cache
+            cache.clearType(collectionName);
+
+            return { id: docId, ...data };
+        });
+    }
+
+    /**
+     * Deletar documento
+     */
+    async deleteDocument(collectionName, docId) {
+        return this.secureOperation(async () => {
+            // Verificar permissão antes de deletar
+            await this.verifyDocumentPermission(collectionName, docId, 'delete');
+
+            await db.collection(collectionName).doc(docId).delete();
+            
+            // Invalidar cache
+            cache.clearType(collectionName);
+
+            return true;
+        });
+    }
+
+    /**
+     * Buscar com filtros personalizados
+     */
+    async queryCollection(collectionName, conditions = []) {
+        return this.secureOperation(async () => {
+            let query = db.collection(collectionName).where('userId', '==', currentUserId);
+
+            // Aplicar condições adicionais
+            conditions.forEach(cond => {
+                query = query.where(cond.field, cond.operator, cond.value);
+            });
+
+            const snapshot = await query.get();
+
+            const results = [];
+            snapshot.forEach(doc => {
+                results.push({ id: doc.id, ...doc.data() });
+            });
+
+            return results;
+        });
+    }
+}
+
+// 🔥 Instância global do serviço de segurança
+const secureDB = new SecureFirebase();
+
+// ============================================
+// 🔥 FUNÇÕES DE PROTEÇÃO DE ACESSO
 // ============================================
 
 /**
- * Log seguro - só mostra em desenvolvimento
+ * Verifica se a página atual é protegida
  */
-function secureLog(...args) {
-    if (IS_DEVELOPMENT) {
-        console.log(...args);
+function isProtectedPage() {
+    const currentPath = window.location.pathname.split('/').pop() || '';
+    return PROTECTED_PAGES.includes(currentPath) || 
+           currentPath === '' || 
+           currentPath.includes('dashboard');
+}
+
+/**
+ * Verifica se a página atual é pública
+ */
+function isPublicPage() {
+    const currentPath = window.location.pathname.split('/').pop() || '';
+    return ALLOWED_PAGES.includes(currentPath);
+}
+
+/**
+ * Registra atividade do usuário
+ */
+function registerActivity() {
+    lastActivityTime = Date.now();
+}
+
+/**
+ * Verifica inatividade do usuário
+ */
+function checkInactivity() {
+    const inactiveTime = Date.now() - lastActivityTime;
+    if (inactiveTime > MAX_INACTIVITY_TIME) {
+        secureLog('Usuário inativo por muito tempo, fazendo logout');
+        forceLogout('Sessão expirada por inatividade');
     }
 }
 
 /**
- * Sanitiza string para prevenir XSS
+ * Monitor de sessão contínuo
  */
+function startSessionMonitor() {
+    if (sessionCheckTimer) {
+        clearInterval(sessionCheckTimer);
+    }
+    
+    sessionCheckTimer = setInterval(async () => {
+        checkInactivity();
+        
+        if (!auth.currentUser) {
+            forceLogout('Sessão expirada');
+            return;
+        }
+        
+        try {
+            const token = await auth.currentUser.getIdToken(true);
+            if (!token) throw new Error('Token inválido');
+        } catch (error) {
+            forceLogout('Sessão inválida');
+        }
+    }, SESSION_CHECK_INTERVAL);
+}
+
+/**
+ * Força logout com limpeza completa
+ */
+function forceLogout(reason = '') {
+    secureLog('Forçando logout:', reason);
+    
+    if (sessionCheckTimer) {
+        clearInterval(sessionCheckTimer);
+        sessionCheckTimer = null;
+    }
+    
+    currentUser = null;
+    currentUserId = null;
+    cache.clear();
+    
+    const theme = localStorage.getItem('theme');
+    const language = localStorage.getItem('language');
+    localStorage.clear();
+    if (theme) localStorage.setItem('theme', theme);
+    if (language) localStorage.setItem('language', language);
+    
+    auth.signOut().catch(error => {
+        console.error('Erro ao fazer logout:', error);
+    }).finally(() => {
+        if (reason) showNotification(reason, 'error');
+        setTimeout(() => window.location.href = 'index.html', 100);
+    });
+}
+
+// ============================================
+// 🔥 VERIFICAÇÃO DE ACESSO
+// ============================================
+async function verifyAccess() {
+    try {
+        const firebaseUser = auth.currentUser;
+        if (!firebaseUser) {
+            throw new Error('Usuário não autenticado');
+        }
+        
+        const token = await firebaseUser.getIdToken(true);
+        if (!token) throw new Error('Token inválido');
+        
+        // Verificar/criar documento do usuário
+        const userDoc = await db.collection('users').doc(firebaseUser.uid).get();
+        
+        if (!userDoc.exists) {
+            await db.collection('users').doc(firebaseUser.uid).set({
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0],
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
+                status: 'active',
+                role: 'user'
+            });
+        } else {
+            const userData = userDoc.data();
+            if (userData.status === 'blocked') throw new Error('Conta bloqueada');
+            if (userData.status === 'inactive') throw new Error('Conta inativa');
+            
+            await db.collection('users').doc(firebaseUser.uid).update({
+                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+        
+        secureDB.getCsrfToken();
+        securityCheckPassed = true;
+        return true;
+        
+    } catch (error) {
+        console.error('Falha na verificação de acesso:', error);
+        securityCheckPassed = false;
+        
+        if (isProtectedPage()) {
+            showNotification(error.message || 'Acesso negado', 'error');
+            setTimeout(() => window.location.href = 'index.html', 1000);
+        }
+        
+        return false;
+    }
+}
+
+// ============================================
+// 🔥 FUNÇÕES ANTI-DEVTOOLS
+// ============================================
+
+function detectDevTools() {
+    if (!DISABLE_DEVTOOLS) return false;
+    
+    const threshold = 160;
+    const start = performance.now();
+    debugger;
+    const end = performance.now();
+    
+    if (end - start > threshold) {
+        devToolsDetected = true;
+        handleSecurityBreach('DevTools detectado');
+        return true;
+    }
+    return false;
+}
+
+function handleSecurityBreach(reason) {
+    console.error('🚨 VIOLAÇÃO DE SEGURANÇA:', reason);
+    secureDB.logSecurityEvent('security_breach', { reason });
+    forceLogout('Violação de segurança detectada');
+}
+
+// ============================================
+// FUNÇÕES DE SEGURANÇA
+// ============================================
+
+function secureLog(...args) {
+    if (IS_DEVELOPMENT && !devToolsDetected) {
+        console.log(...args);
+    }
+}
+
 function sanitizeString(str) {
     if (str === null || str === undefined) return '';
-    return String(str)
+    
+    let sanitized = String(str)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
@@ -124,33 +622,40 @@ function sanitizeString(str) {
         .replace(/'/g, '&#039;')
         .replace(/\//g, '&#x2F;')
         .replace(/\\/g, '&#x5C;')
-        .replace(/`/g, '&#96;');
+        .replace(/`/g, '&#96;')
+        .replace(/javascript:/gi, '')
+        .replace(/onerror/gi, '')
+        .replace(/onload/gi, '')
+        .replace(/onclick/gi, '')
+        .replace(/onmouse/gi, '')
+        .replace(/data:/gi, '')
+        .replace(/vbscript:/gi, '');
+    
+    if (sanitized.length > 5000) {
+        sanitized = sanitized.substring(0, 5000);
+    }
+    
+    return sanitized;
 }
 
-/**
- * Valida email
- */
 function isValidEmail(email) {
+    if (!email || typeof email !== 'string') return false;
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(String(email).toLowerCase());
+    return re.test(String(email).toLowerCase()) && email.length <= 100;
 }
 
-/**
- * Valida telefone (formato brasileiro)
- */
 function isValidPhone(phone) {
+    if (!phone) return false;
     const numbers = String(phone).replace(/\D/g, '');
     return numbers.length >= 10 && numbers.length <= 13;
 }
 
-/**
- * Valida CPF
- */
 function isValidCPF(cpf) {
+    if (!cpf || typeof cpf !== 'string') return false;
+    
     const numbers = String(cpf).replace(/\D/g, '');
     if (numbers.length !== 11) return false;
     
-    // Validar dígitos verificadores
     let sum = 0;
     let remainder;
     
@@ -172,30 +677,23 @@ function isValidCPF(cpf) {
     return true;
 }
 
-/**
- * Valida e sanitiza base64 de imagem
- */
 function validateAndSanitizeImageBase64(base64String) {
     if (!base64String) return null;
     
     try {
-        // Verificar formato
         const matches = base64String.match(/^data:image\/(jpeg|png|gif|webp);base64,(.+)$/);
-        if (!matches) {
-            throw new Error('Formato de imagem inválido');
-        }
+        if (!matches) throw new Error('Formato de imagem inválido');
         
-        const imageType = matches[1];
         const base64Data = matches[2];
-        
-        // Verificar tamanho (aproximado)
         const sizeInBytes = Math.ceil((base64Data.length * 3) / 4);
-        if (sizeInBytes > MAX_IMAGE_SIZE) {
-            throw new Error('Imagem muito grande. Máximo 5MB');
-        }
+        if (sizeInBytes > MAX_IMAGE_SIZE) throw new Error('Imagem muito grande. Máximo 5MB');
         
-        // Verificar se é realmente base64 válido
         atob(base64Data);
+        
+        if (base64Data.toLowerCase().includes('script') || 
+            base64Data.toLowerCase().includes('javascript')) {
+            throw new Error('Imagem contém código suspeito');
+        }
         
         return base64String;
     } catch (e) {
@@ -204,9 +702,6 @@ function validateAndSanitizeImageBase64(base64String) {
     }
 }
 
-/**
- * Mascara CPF para exibição (mostra só últimos dígitos)
- */
 function maskCPF(cpf) {
     if (!cpf) return '***.***.***-**';
     const clean = String(cpf).replace(/\D/g, '');
@@ -214,59 +709,35 @@ function maskCPF(cpf) {
     return `***.***.${clean.slice(-4)}`;
 }
 
-/**
- * Verifica se o usuário atual é dono do documento
- */
-async function verifyOwnership(collection, docId, checkExists = true) {
-    if (!currentUserId) {
-        throw new Error('Usuário não autenticado');
-    }
-    
-    const docRef = db.collection(collection).doc(docId);
-    const doc = await docRef.get();
-    
-    if (checkExists && !doc.exists) {
-        throw new Error(`${collection} não encontrado`);
-    }
-    
-    if (doc.exists && doc.data().userId !== currentUserId) {
-        throw new Error('Acesso negado a este documento');
-    }
-    
-    return { doc, docRef };
-}
-
-// ============================================
-// 🔥 NOVA FUNÇÃO: VERIFICAR SE CPF JÁ EXISTE
-// ============================================
 async function checkExistingCPF(cpf, excludeClientId = null) {
     if (!currentUserId) throw new Error('Usuário não autenticado');
     
-    // Buscar todos os clientes do usuário com este CPF
-    const snapshot = await db.collection('clients')
-        .where('userId', '==', currentUserId)
-        .where('cpf', '==', cpf)
-        .get();
+    await verifyAccess();
     
-    if (snapshot.empty) return false; // CPF não existe
+    if (!isValidCPF(cpf)) throw new Error('CPF inválido');
     
-    // Se estamos editando, ignorar o próprio cliente
-    if (excludeClientId) {
-        let exists = false;
-        snapshot.forEach(doc => {
-            if (doc.id !== excludeClientId) exists = true;
-        });
-        return exists;
-    }
-    
-    return true; // CPF já existe para outro cliente
+    return secureDB.secureOperation(async () => {
+        let query = db.collection('clients')
+            .where('userId', '==', currentUserId)
+            .where('cpf', '==', cpf);
+        
+        const snapshot = await query.get();
+        
+        if (snapshot.empty) return false;
+        
+        if (excludeClientId) {
+            let exists = false;
+            snapshot.forEach(doc => {
+                if (doc.id !== excludeClientId) exists = true;
+            });
+            return exists;
+        }
+        
+        return true;
+    });
 }
 
-/**
- * Mostra notificação segura
- */
 function showNotification(message, type = 'info') {
-    // Sanitizar mensagem
     const safeMessage = sanitizeString(message);
     
     const notification = document.createElement('div');
@@ -293,7 +764,6 @@ function showNotification(message, type = 'info') {
 // FUNÇÕES DE CORES (com validação)
 // ============================================
 
-// Cores padrão do sistema
 const defaultColors = {
     primary: '#4f46e5',
     secondary: '#10b981',
@@ -307,18 +777,15 @@ const defaultColors = {
     wellhub: '#D91414'
 };
 
-// Validar formato hexadecimal
 function isValidHex(hex) {
     return /^#[0-9A-Fa-f]{6}$/.test(hex);
 }
 
-// Carregar cores salvas com validação
 function loadSavedColors() {
     try {
         const saved = localStorage.getItem('nexbook_colors');
         if (saved) {
             const colors = JSON.parse(saved);
-            // Validar cores
             if (isValidHex(colors.primary) && 
                 isValidHex(colors.secondary) && 
                 isValidHex(colors.background)) {
@@ -332,9 +799,7 @@ function loadSavedColors() {
     return defaultColors;
 }
 
-// Aplicar cores ao CSS com validação
 function applyColorsToCSS(colors) {
-    // Validar cores
     const safeColors = {
         primary: isValidHex(colors.primary) ? colors.primary : defaultColors.primary,
         secondary: isValidHex(colors.secondary) ? colors.secondary : defaultColors.secondary,
@@ -350,7 +815,6 @@ function applyColorsToCSS(colors) {
     
     const root = document.documentElement;
     
-    // Cores principais
     root.style.setProperty('--primary', safeColors.primary);
     root.style.setProperty('--primary-light', adjustColor(safeColors.primary, 40));
     root.style.setProperty('--primary-dark', adjustColor(safeColors.primary, -40));
@@ -366,18 +830,14 @@ function applyColorsToCSS(colors) {
     root.style.setProperty('--danger', safeColors.danger);
     root.style.setProperty('--warning', safeColors.warning);
     
-    // Cores específicas para badges
     root.style.setProperty('--totalpass', safeColors.totalpass);
     root.style.setProperty('--wellhub', safeColors.wellhub);
     
-    // Salvar no localStorage
     localStorage.setItem('nexbook_colors', JSON.stringify(safeColors));
     
-    // Atualizar gráficos com novas cores
     updateAllChartsColors(safeColors);
 }
 
-// Ajustar cor (clarear/escurecer) com validação
 function adjustColor(hex, percent) {
     if (!isValidHex(hex)) return hex;
     
@@ -393,7 +853,6 @@ function adjustColor(hex, percent) {
     return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
 }
 
-// Verificar se cor é clara
 function isColorLight(hex) {
     if (!isValidHex(hex)) return true;
     
@@ -406,11 +865,12 @@ function isColorLight(hex) {
 }
 
 // ============================================
-// FUNÇÕES DO MODAL DE DESIGN (COMPLETAS)
+// FUNÇÕES DO MODAL DE DESIGN
 // ============================================
 
-// Abrir modal de design
 function openDesignModal() {
+    detectDevTools();
+    
     const modal = document.getElementById('designModal');
     if (!modal) return;
     
@@ -418,9 +878,7 @@ function openDesignModal() {
     
     modal.style.display = 'flex';
     
-    // Inicializar color pickers
     setTimeout(() => {
-        // Primary Color
         if (!primaryPicker) {
             primaryPicker = Pickr.create({
                 el: '#primaryColorPicker',
@@ -452,7 +910,6 @@ function openDesignModal() {
             primaryPicker.setColor(currentColors.primary);
         }
         
-        // Secondary Color
         if (!secondaryPicker) {
             secondaryPicker = Pickr.create({
                 el: '#secondaryColorPicker',
@@ -484,7 +941,6 @@ function openDesignModal() {
             secondaryPicker.setColor(currentColors.secondary);
         }
         
-        // Background Color
         if (!backgroundPicker) {
             backgroundPicker = Pickr.create({
                 el: '#backgroundColorPicker',
@@ -516,7 +972,6 @@ function openDesignModal() {
             backgroundPicker.setColor(currentColors.background);
         }
         
-        // Success Color
         if (!successPicker) {
             successPicker = Pickr.create({
                 el: '#successColorPicker',
@@ -548,7 +1003,6 @@ function openDesignModal() {
             successPicker.setColor(currentColors.success);
         }
         
-        // Atualizar inputs
         document.getElementById('primaryColorInput').value = currentColors.primary;
         document.getElementById('secondaryColorInput').value = currentColors.secondary;
         document.getElementById('backgroundColorInput').value = currentColors.background;
@@ -556,15 +1010,11 @@ function openDesignModal() {
     }, 100);
 }
 
-// Fechar modal de design
 function closeDesignModal() {
     const modal = document.getElementById('designModal');
-    if (modal) {
-        modal.style.display = 'none';
-    }
+    if (modal) modal.style.display = 'none';
 }
 
-// Atualizar cor específica com validação
 function updateColor(type, hex) {
     if (!isValidHex(hex)) {
         showNotification('Cor inválida', 'error');
@@ -576,18 +1026,15 @@ function updateColor(type, hex) {
     applyColorsToCSS(currentColors);
 }
 
-// Resetar cores para o padrão
 function resetDesignColors() {
     if (confirm('Tem certeza que deseja resetar todas as cores para o padrão?')) {
         applyColorsToCSS(defaultColors);
         
-        // Atualizar pickers
         if (primaryPicker) primaryPicker.setColor(defaultColors.primary);
         if (secondaryPicker) secondaryPicker.setColor(defaultColors.secondary);
         if (backgroundPicker) backgroundPicker.setColor(defaultColors.background);
         if (successPicker) successPicker.setColor(defaultColors.success);
         
-        // Atualizar inputs
         document.getElementById('primaryColorInput').value = defaultColors.primary;
         document.getElementById('secondaryColorInput').value = defaultColors.secondary;
         document.getElementById('backgroundColorInput').value = defaultColors.background;
@@ -597,15 +1044,12 @@ function resetDesignColors() {
     }
 }
 
-// Salvar design
 function saveDesignColors() {
     closeDesignModal();
     showNotification('Design salvo com sucesso!', 'success');
 }
 
-// Atualizar cores de todos os gráficos
 function updateAllChartsColors(colors) {
-    // Gráfico de agendamentos
     if (appointmentsChart) {
         appointmentsChart.updateOptions({
             colors: [colors.success, colors.danger],
@@ -613,7 +1057,6 @@ function updateAllChartsColors(colors) {
         });
     }
     
-    // Gráfico de planos
     if (servicesChart) {
         servicesChart.updateOptions({
             colors: [colors.primary, colors.secondary, colors.success, colors.warning, colors.danger],
@@ -621,7 +1064,6 @@ function updateAllChartsColors(colors) {
         });
     }
     
-    // Gráficos de relatórios
     if (reportsLineChart) {
         reportsLineChart.updateOptions({
             colors: [colors.primary]
@@ -688,7 +1130,7 @@ window.addEventListener('resize', function() {
 });
 
 // ============================================
-// FUNÇÕES DE BUSCA GLOBAL (com sanitização)
+// FUNÇÕES DE BUSCA GLOBAL
 // ============================================
 function handleGlobalSearch() {
     const searchInput = document.getElementById('globalSearch');
@@ -847,6 +1289,9 @@ function filterReportClients() {
 async function loadAllData() {
     if (!currentUserId) return;
     
+    detectDevTools();
+    await verifyAccess();
+    
     try {
         await Promise.all([
             loadDashboardData(),
@@ -862,7 +1307,7 @@ async function loadAllData() {
 }
 
 // ============================================
-// FUNÇÃO LOADDASHBOARDDATA (com verificações de segurança)
+// FUNÇÃO LOADDASHBOARDDATA
 // ============================================
 async function loadDashboardData() {
     if (!currentUserId) return;
@@ -873,20 +1318,19 @@ async function loadDashboardData() {
         
         secureLog('Carregando dashboard com filtros:', { professionalFilter, serviceFilter });
         
-        let query = db.collection('appointments').where('userId', '==', currentUserId);
+        // Buscar agendamentos
+        let appointmentsQuery = db.collection('appointments').where('userId', '==', currentUserId);
         
         if (professionalFilter !== 'all') {
-            query = query.where('professionalId', '==', professionalFilter);
+            appointmentsQuery = appointmentsQuery.where('professionalId', '==', professionalFilter);
         }
         if (serviceFilter !== 'all') {
-            query = query.where('serviceId', '==', serviceFilter);
+            appointmentsQuery = appointmentsQuery.where('serviceId', '==', serviceFilter);
         }
         
-        const snapshot = await query.get();
-        secureLog('Total agendamentos encontrados:', snapshot.size);
-        
+        const appointmentsSnapshot = await appointmentsQuery.get();
         const appointments = [];
-        snapshot.forEach(doc => {
+        appointmentsSnapshot.forEach(doc => {
             appointments.push({ id: doc.id, ...doc.data() });
         });
         
@@ -898,14 +1342,14 @@ async function loadDashboardData() {
         
         const todayAppointments = appointments.filter(a => a.date === todayStr);
         
-        // Calcular faturamento do dia com segurança
+        // Calcular faturamento do dia
         let todayRevenue = 0;
         for (const apt of todayAppointments) {
             if (apt.serviceId) {
                 try {
-                    const { doc } = await verifyOwnership('services', apt.serviceId, false);
-                    if (doc.exists) {
-                        todayRevenue += doc.data().price || 0;
+                    const serviceDoc = await db.collection('services').doc(apt.serviceId).get();
+                    if (serviceDoc.exists) {
+                        todayRevenue += serviceDoc.data().price || 0;
                     }
                 } catch (e) {
                     secureLog('Erro ao buscar serviço:', e);
@@ -934,7 +1378,6 @@ async function loadDashboardData() {
         const firstDayStr = firstDayOfMonth.toISOString().split('T')[0];
         const lastDayStr = lastDayOfMonth.toISOString().split('T')[0];
         
-        // Clientes com planos mensais
         clients.filter(c => c.status === 'active' && c.plan !== 'AVULSO').forEach(client => {
             if (client.planValue && client.planValue > 0) {
                 monthlyRevenue += client.planValue;
@@ -946,7 +1389,6 @@ async function loadDashboardData() {
             }
         });
         
-        // Agendamentos avulsos
         const avulsoAppointments = appointments.filter(apt => {
             const client = clients.find(c => c.id === apt.clientId);
             return client && client.plan === 'AVULSO' && 
@@ -957,9 +1399,9 @@ async function loadDashboardData() {
         for (const apt of avulsoAppointments) {
             if (apt.serviceId) {
                 try {
-                    const { doc } = await verifyOwnership('services', apt.serviceId, false);
-                    if (doc.exists) {
-                        const servicePrice = doc.data().price || 0;
+                    const serviceDoc = await db.collection('services').doc(apt.serviceId).get();
+                    if (serviceDoc.exists) {
+                        const servicePrice = serviceDoc.data().price || 0;
                         monthlyRevenue += servicePrice;
                         
                         const client = clients.find(c => c.id === apt.clientId);
@@ -977,7 +1419,6 @@ async function loadDashboardData() {
             }
         }
         
-        // Atualizar UI
         updateDashboardUI({
             todayAppointments: todayAppointments.length,
             todayRevenue,
@@ -987,7 +1428,6 @@ async function loadDashboardData() {
             appointments
         });
         
-        // Carregar profissionais ativos
         try {
             const profSnapshot = await db.collection('professionals')
                 .where('userId', '==', currentUserId)
@@ -999,7 +1439,7 @@ async function loadDashboardData() {
         }
         
         updateCharts(appointments);
-        updatePlansChart(clientsSnapshot);
+        updatePlansChart(clients);
         
     } catch (error) {
         console.error('Erro ao carregar dashboard:', error);
@@ -1007,13 +1447,11 @@ async function loadDashboardData() {
     }
 }
 
-// Função auxiliar para atualizar UI do dashboard
 function updateDashboardUI(data) {
     document.getElementById('todayCount').textContent = data.todayAppointments;
     document.getElementById('revenueValue').textContent = formatCurrency(data.todayRevenue);
     document.getElementById('clientsValue').textContent = data.activeClients;
     
-    // Atualizar card de faturamento mensal
     let monthlyCard = document.getElementById('monthlyRevenueCard');
     if (!monthlyCard) {
         const statsGrid = document.querySelector('.stats-grid');
@@ -1039,7 +1477,6 @@ function updateDashboardUI(data) {
         if (valueElement) {
             valueElement.textContent = formatCurrency(data.monthlyRevenue);
             
-            // Criar tooltip seguro
             let tooltipText = 'Detalhamento do faturamento mensal:\n';
             data.clientValues.sort((a, b) => b.valor - a.valor).forEach(c => {
                 tooltipText += `${c.name}: ${formatCurrency(c.valor)}\n`;
@@ -1052,7 +1489,7 @@ function updateDashboardUI(data) {
 }
 
 // ============================================
-// FUNÇÃO LOADPROFESSIONALS (com segurança)
+// FUNÇÃO LOADPROFESSIONALS
 // ============================================
 async function loadProfessionals() {
     if (!currentUserId) return;
@@ -1084,7 +1521,6 @@ async function loadProfessionals() {
     }
 }
 
-// Atualizar tabela de profissionais com sanitização
 function updateProfessionalsTable(professionals) {
     const tbody = document.getElementById('professionalsList');
     if (!tbody) return;
@@ -1095,7 +1531,6 @@ function updateProfessionalsTable(professionals) {
     }
     
     tbody.innerHTML = professionals.map(p => {
-        // SANITIZAR TODOS OS CAMPOS
         const safeName = sanitizeString(p.name || '---');
         const safeSpecialty = sanitizeString(p.specialty || '---');
         const safeEmail = sanitizeString(p.email || '---');
@@ -1124,13 +1559,11 @@ function updateProfessionalsTable(professionals) {
         `;
     }).join('');
     
-    if (globalSearchTerm) {
-        filterProfessionalsTable();
-    }
+    if (globalSearchTerm) filterProfessionalsTable();
 }
 
 // ============================================
-// FUNÇÃO LOADSERVICES (com segurança)
+// FUNÇÃO LOADSERVICES
 // ============================================
 async function loadServices() {
     if (!currentUserId) return;
@@ -1160,7 +1593,6 @@ async function loadServices() {
     }
 }
 
-// Atualizar tabela de serviços com sanitização
 function updateServicesTable(services) {
     const tbody = document.getElementById('servicesList');
     if (!tbody) return;
@@ -1197,13 +1629,11 @@ function updateServicesTable(services) {
         `;
     }).join('');
     
-    if (globalSearchTerm) {
-        filterServicesTable();
-    }
+    if (globalSearchTerm) filterServicesTable();
 }
 
 // ============================================
-// FUNÇÃO LOADCLIENTS (com segurança)
+// FUNÇÃO LOADCLIENTS
 // ============================================
 async function loadClients() {
     if (!currentUserId) return;
@@ -1235,7 +1665,6 @@ async function loadClients() {
     }
 }
 
-// Atualizar tabela de clientes com sanitização e proteção
 function updateClientsTable(clients) {
     const tbody = document.getElementById('clientsList');
     if (!tbody) return;
@@ -1246,7 +1675,6 @@ function updateClientsTable(clients) {
     }
     
     tbody.innerHTML = clients.map(c => {
-        // Sanitizar campos de texto
         const safeName = sanitizeString(c.name || '---');
         const safeEmail = sanitizeString(c.email || '---');
         const safePhone = sanitizeString(c.phone || '---');
@@ -1254,10 +1682,8 @@ function updateClientsTable(clients) {
         const safeOrigin = sanitizeString(c.origin || 'Direto');
         const safeCity = sanitizeString(c.city || '---');
         
-        // Mascarar CPF
         const maskedCpf = maskCPF(c.cpf);
         
-        // Validar imagem
         let fotoHtml = '<div class="user-avatar" style="width: 40px; height: 40px; font-size: 14px;"><i class="fas fa-user"></i></div>';
         if (c.photoBase64) {
             try {
@@ -1270,17 +1696,12 @@ function updateClientsTable(clients) {
         }
         
         const colors = loadSavedColors();
-        const origemClass = safeOrigin === 'Total Pass' ? 'badge-totalpass' : 
-                           (safeOrigin === 'Well Hub' ? 'badge-wellhub' : '');
         
-        // Formatar datas com segurança
         let dataNascimentoFormatada = '---';
         if (c.birthDate) {
             try {
                 const [ano, mes, dia] = String(c.birthDate).split('-');
-                if (ano && mes && dia) {
-                    dataNascimentoFormatada = `${dia}/${mes}/${ano}`;
-                }
+                if (ano && mes && dia) dataNascimentoFormatada = `${dia}/${mes}/${ano}`;
             } catch (e) {
                 secureLog('Erro ao formatar data nascimento');
             }
@@ -1331,13 +1752,11 @@ function updateClientsTable(clients) {
         `;
     }).join('');
     
-    if (globalSearchTerm) {
-        filterClientsTable();
-    }
+    if (globalSearchTerm) filterClientsTable();
 }
 
 // ============================================
-// FUNÇÃO LOADFILTERS (com segurança)
+// FUNÇÃO LOADFILTERS
 // ============================================
 async function loadFilters() {
     if (!currentUserId) return;
@@ -1402,7 +1821,7 @@ function updateServiceFilter(services) {
 }
 
 // ============================================
-// FUNÇÃO UPDATEAPPOINTMENTSLIST (com segurança)
+// FUNÇÃO UPDATEAPPOINTMENTSLIST
 // ============================================
 async function updateAppointmentsList(appointments) {
     const list = document.getElementById('appointmentsList');
@@ -1509,11 +1928,11 @@ async function updateAppointmentsList(appointments) {
     list.innerHTML = items.join('');
 }
 
-// Funções auxiliares com verificação de propriedade
+// Funções auxiliares
 async function getClientName(clientId) {
     if (!clientId || !currentUserId) return 'Cliente';
     try {
-        const { doc } = await verifyOwnership('clients', clientId, false);
+        const doc = await db.collection('clients').doc(clientId).get();
         return doc.exists ? doc.data().name : 'Cliente';
     } catch {
         return 'Cliente';
@@ -1523,7 +1942,7 @@ async function getClientName(clientId) {
 async function getServiceName(serviceId) {
     if (!serviceId || !currentUserId) return 'Serviço';
     try {
-        const { doc } = await verifyOwnership('services', serviceId, false);
+        const doc = await db.collection('services').doc(serviceId).get();
         return doc.exists ? doc.data().name : 'Serviço';
     } catch {
         return 'Serviço';
@@ -1533,7 +1952,7 @@ async function getServiceName(serviceId) {
 async function getProfessionalName(professionalId) {
     if (!professionalId || !currentUserId) return 'Profissional';
     try {
-        const { doc } = await verifyOwnership('professionals', professionalId, false);
+        const doc = await db.collection('professionals').doc(professionalId).get();
         return doc.exists ? doc.data().name : 'Profissional';
     } catch {
         return 'Profissional';
@@ -1541,7 +1960,7 @@ async function getProfessionalName(professionalId) {
 }
 
 // ============================================
-// FUNÇÕES DE GRÁFICOS (mantidas)
+// FUNÇÕES DE GRÁFICOS
 // ============================================
 function updateCharts(appointments) {
     const categories = [];
@@ -1576,7 +1995,7 @@ function updateCharts(appointments) {
     }
 }
 
-function updatePlansChart(clientsSnapshot) {
+function updatePlansChart(clients) {
     if (!servicesChart) return;
     
     const planCounts = {
@@ -1587,8 +2006,7 @@ function updatePlansChart(clientsSnapshot) {
         AVULSO: 0
     };
     
-    clientsSnapshot.forEach(doc => {
-        const client = doc.data();
+    clients.forEach(client => {
         if (client.plan && planCounts.hasOwnProperty(client.plan)) {
             planCounts[client.plan]++;
         } else if (client.plan === 'AVULSO') {
@@ -1646,7 +2064,7 @@ function getStatusText(status) {
 }
 
 // ============================================
-// CALENDÁRIO (com verificações de segurança)
+// CALENDÁRIO
 // ============================================
 function initializeCalendar() {
     const calendarEl = document.getElementById('calendar');
@@ -1725,8 +2143,13 @@ function initializeCalendar() {
                 const eventId = info.event.id;
                 const newStart = info.event.start;
                 
-                // Verificar propriedade
-                await verifyOwnership('appointments', eventId);
+                // Verificar propriedade antes de atualizar
+                const docRef = db.collection('appointments').doc(eventId);
+                const doc = await docRef.get();
+                
+                if (!doc.exists || doc.data().userId !== currentUserId) {
+                    throw new Error('Acesso negado');
+                }
                 
                 const year  = newStart.getFullYear();
                 const month = String(newStart.getMonth() + 1).padStart(2, '0');
@@ -1734,10 +2157,10 @@ function initializeCalendar() {
                 const dateStr = `${year}-${month}-${day}`;
                 const timeStr = `${String(newStart.getHours()).padStart(2, '0')}:${String(newStart.getMinutes()).padStart(2, '0')}`;
                 
-                await db.collection('appointments').doc(eventId).update({
+                await docRef.update({
                     date: dateStr,
                     time: timeStr,
-                    updatedAt: new Date().toISOString()
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
                 showNotification('Agendamento movido com sucesso!', 'success');
@@ -1759,8 +2182,12 @@ function initializeCalendar() {
             try {
                 const eventId = info.event.id;
                 
-                // Verificar propriedade
-                await verifyOwnership('appointments', eventId);
+                const docRef = db.collection('appointments').doc(eventId);
+                const doc = await docRef.get();
+                
+                if (!doc.exists || doc.data().userId !== currentUserId) {
+                    throw new Error('Acesso negado');
+                }
                 
                 const newStart = info.event.start;
                 const newEnd = info.event.end;
@@ -1769,18 +2196,17 @@ function initializeCalendar() {
                     const diffMs = newEnd - newStart;
                     const newDuration = Math.round(diffMs / 60000);
                     
-                    const { doc } = await verifyOwnership('appointments', eventId);
                     const appointmentData = doc.data();
                     
                     if (appointmentData.serviceId) {
-                        const { doc: serviceDoc } = await verifyOwnership('services', appointmentData.serviceId, false);
+                        const serviceDoc = await db.collection('services').doc(appointmentData.serviceId).get();
                         const serviceDuration = serviceDoc.exists ? serviceDoc.data().duration : 60;
                         
                         if (Math.abs(newDuration - serviceDuration) > 15) {
                             if (confirm('Deseja alterar a duração deste agendamento?')) {
-                                await db.collection('appointments').doc(eventId).update({
+                                await docRef.update({
                                     customDuration: newDuration,
-                                    updatedAt: new Date().toISOString()
+                                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                                 });
                             } else {
                                 info.revert();
@@ -1850,7 +2276,7 @@ function initializeCalendar() {
 }
 
 // ============================================
-// FUNÇÃO PARA CARREGAR EVENTOS DO FIREBASE (COM SEGURANÇA)
+// FUNÇÃO PARA CARREGAR EVENTOS DO CALENDÁRIO
 // ============================================
 async function loadCalendarEvents(fetchInfo, successCallback, failureCallback) {
     if (!currentUserId) {
@@ -1879,46 +2305,45 @@ async function loadCalendarEvents(fetchInfo, successCallback, failureCallback) {
             if (data.professionalId) professionalIds.add(data.professionalId);
         });
         
-        // Buscar dados relacionados com verificação de propriedade
         const [clientDocs, serviceDocs, professionalDocs] = await Promise.all([
             Promise.all(Array.from(clientIds).map(id => 
-                verifyOwnership('clients', id, false).catch(() => ({ doc: { exists: false } }))
+                db.collection('clients').doc(id).get().catch(() => null)
             )),
             Promise.all(Array.from(serviceIds).map(id => 
-                verifyOwnership('services', id, false).catch(() => ({ doc: { exists: false } }))
+                db.collection('services').doc(id).get().catch(() => null)
             )),
             Promise.all(Array.from(professionalIds).map(id => 
-                verifyOwnership('professionals', id, false).catch(() => ({ doc: { exists: false } }))
+                db.collection('professionals').doc(id).get().catch(() => null)
             ))
         ]);
         
         const clientMap = new Map();
-        clientDocs.forEach((result, index) => {
+        clientDocs.forEach((doc, index) => {
             const id = Array.from(clientIds)[index];
-            if (result.doc && result.doc.exists) {
-                clientMap.set(id, result.doc.data().name);
+            if (doc && doc.exists) {
+                clientMap.set(id, doc.data().name);
             }
         });
         
         const serviceMap = new Map();
-        serviceDocs.forEach((result, index) => {
+        serviceDocs.forEach((doc, index) => {
             const id = Array.from(serviceIds)[index];
-            if (result.doc && result.doc.exists) {
-                serviceMap.set(id, result.doc.data());
+            if (doc && doc.exists) {
+                serviceMap.set(id, doc.data());
             }
         });
         
         const professionalMap = new Map();
-        professionalDocs.forEach((result, index) => {
+        professionalDocs.forEach((doc, index) => {
             const id = Array.from(professionalIds)[index];
-            if (result.doc && result.doc.exists) {
-                professionalMap.set(id, result.doc.data().name);
+            if (doc && doc.exists) {
+                professionalMap.set(id, doc.data().name);
             }
         });
         
         const colors = loadSavedColors();
         
-        for (const doc of snapshot.docs) {
+        snapshot.docs.forEach(doc => {
             const data = doc.data();
             
             const clientName = clientMap.get(data.clientId) || 'Cliente';
@@ -1964,7 +2389,7 @@ async function loadCalendarEvents(fetchInfo, successCallback, failureCallback) {
                     endTime: endTime
                 }
             });
-        }
+        });
         
         successCallback(events);
         
@@ -1975,7 +2400,7 @@ async function loadCalendarEvents(fetchInfo, successCallback, failureCallback) {
 }
 
 // ============================================
-// FUNÇÃO PARA MOSTRAR DETALHES DO AGENDAMENTO (COM SEGURANÇA)
+// FUNÇÃO PARA MOSTRAR DETALHES DO AGENDAMENTO
 // ============================================
 function showAppointmentDetails(event) {
     const props = event.extendedProps;
@@ -2138,7 +2563,7 @@ function closeAppointmentDetails() {
 }
 
 // ============================================
-// FUNÇÕES DE FOTO COM VALIDAÇÃO
+// FUNÇÕES DE FOTO
 // ============================================
 function openCamera() {
     const input = document.createElement('input');
@@ -2161,7 +2586,6 @@ function handlePhotoSelect(event) {
     const file = event.target.files[0];
     if (!file) return;
     
-    // Validações
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
         showNotification('Tipo de arquivo não permitido. Use apenas imagens.', 'error');
         return;
@@ -2189,13 +2613,16 @@ function handlePhotoSelect(event) {
 }
 
 // ============================================
-// FUNÇÕES DO MODAL (COM SEGURANÇA)
+// FUNÇÕES DO MODAL
 // ============================================
 function openModal(type, date = null, time = null) {
     if (!currentUserId) {
         showNotification('Faça login primeiro', 'error');
         return;
     }
+    
+    detectDevTools();
+    registerActivity();
     
     currentModalType = type;
     editingId = null;
@@ -2311,7 +2738,6 @@ function openModal(type, date = null, time = null) {
         
     } else if (type === 'client' || type === 'totalpass' || type === 'wellhub') {
         const origin = type === 'totalpass' ? 'Total Pass' : (type === 'wellhub' ? 'Well Hub' : 'Direto');
-        
         fields.innerHTML = getClientModalFields(origin);
     }
     
@@ -2319,7 +2745,7 @@ function openModal(type, date = null, time = null) {
 }
 
 // ============================================
-// FUNÇÃO GETCLIENTMODALFIELDS (COM SEGURANÇA)
+// FUNÇÃO GETCLIENTMODALFIELDS
 // ============================================
 function getClientModalFields(origin = 'Direto') {
     const today = new Date().toISOString().split('T')[0];
@@ -2425,7 +2851,7 @@ function getClientModalFields(origin = 'Direto') {
 }
 
 // ============================================
-// FUNÇÃO LOADMODALSELECTS (COM SEGURANÇA)
+// FUNÇÃO LOADMODALSELECTS
 // ============================================
 async function loadModalSelects(selected = {}) {
     if (!currentUserId) return;
@@ -2513,7 +2939,7 @@ function closeModal() {
 }
 
 // ============================================
-// FUNÇÕES DE MÁSCARA (mantidas)
+// FUNÇÕES DE MÁSCARA
 // ============================================
 function mascaraMoeda(input) {
     let v = input.value.replace(/\D/g, '');
@@ -2563,7 +2989,7 @@ async function buscarCep() {
 }
 
 // ============================================
-// FUNÇÃO EDITITEM (COM VERIFICAÇÃO DE PROPRIEDADE)
+// FUNÇÃO EDITITEM
 // ============================================
 async function editItem(type, id) {
     if (!currentUserId) {
@@ -2571,9 +2997,24 @@ async function editItem(type, id) {
         return;
     }
     
+    detectDevTools();
+    registerActivity();
+    
     try {
-        // Verificar propriedade
-        const { doc } = await verifyOwnership(type + 's', id);
+        // Verificar propriedade antes de carregar
+        const docRef = db.collection(type + 's').doc(id);
+        const doc = await docRef.get();
+        
+        if (!doc.exists) {
+            showNotification('Documento não encontrado', 'error');
+            return;
+        }
+        
+        if (doc.data().userId !== currentUserId) {
+            showNotification('Acesso negado a este documento', 'error');
+            return;
+        }
+        
         const data = doc.data();
         
         currentModalType = type;
@@ -2814,13 +3255,16 @@ async function editItem(type, id) {
 }
 
 // ============================================
-// FUNÇÃO SAVEMODAL (COM VALIDAÇÕES E SEGURANÇA E VERIFICAÇÃO DE CPF DUPLICADO)
+// FUNÇÃO SAVEMODAL
 // ============================================
 async function saveModal() {
     if (!currentModalType || !currentUserId) {
         showNotification('Usuário não autenticado', 'error');
         return;
     }
+    
+    detectDevTools();
+    registerActivity();
     
     const type = currentModalType;
     let data = {};
@@ -2843,13 +3287,6 @@ async function saveModal() {
                 throw new Error('Preencha todos os campos obrigatórios');
             }
             
-            // Verificar se os IDs pertencem ao usuário
-            await Promise.all([
-                verifyOwnership('clients', clientId, false),
-                verifyOwnership('services', serviceId, false),
-                verifyOwnership('professionals', professionalId, false)
-            ]);
-            
             data = {
                 userId: currentUserId,
                 clientId,
@@ -2859,9 +3296,15 @@ async function saveModal() {
                 time,
                 notes: sanitizeString(notes || ''),
                 status: 'pending',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
+            
+            if (editingId) {
+                await db.collection('appointments').doc(editingId).update(data);
+            } else {
+                await db.collection('appointments').add(data);
+            }
             
         } else if (type === 'professional') {
             const name = document.getElementById('modalName')?.value;
@@ -2871,13 +3314,8 @@ async function saveModal() {
             
             if (!name) throw new Error('Nome é obrigatório');
             
-            if (email && !isValidEmail(email)) {
-                throw new Error('Email inválido');
-            }
-            
-            if (phone && !isValidPhone(phone)) {
-                throw new Error('Telefone inválido');
-            }
+            if (email && !isValidEmail(email)) throw new Error('Email inválido');
+            if (phone && !isValidPhone(phone)) throw new Error('Telefone inválido');
             
             data = {
                 userId: currentUserId,
@@ -2886,9 +3324,18 @@ async function saveModal() {
                 email: sanitizeString(email || ''),
                 phone: sanitizeString(phone || ''),
                 active: document.getElementById('modalActive')?.value === 'true',
-                createdAt: editingId ? undefined : new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
+            
+            if (!editingId) {
+                data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            }
+            
+            if (editingId) {
+                await db.collection('professionals').doc(editingId).update(data);
+            } else {
+                await db.collection('professionals').add(data);
+            }
             
         } else if (type === 'service') {
             const name = document.getElementById('modalName')?.value;
@@ -2903,13 +3350,22 @@ async function saveModal() {
             data = {
                 userId: currentUserId,
                 name: sanitizeString(name),
-                duration: duration,
-                price: price,
+                duration,
+                price,
                 description: sanitizeString(document.getElementById('modalDescription')?.value || ''),
                 active: document.getElementById('modalActive')?.value === 'true',
-                createdAt: editingId ? undefined : new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
+            
+            if (!editingId) {
+                data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            }
+            
+            if (editingId) {
+                await db.collection('services').doc(editingId).update(data);
+            } else {
+                await db.collection('services').add(data);
+            }
             
         } else if (type === 'client' || type === 'totalpass' || type === 'wellhub') {
             const name = document.getElementById('modalName')?.value;
@@ -2922,7 +3378,6 @@ async function saveModal() {
                           (type === 'totalpass' ? 'Total Pass' : 
                            type === 'wellhub' ? 'Well Hub' : 'Direto');
             
-            // Validações
             if (!name) throw new Error('Nome é obrigatório');
             if (!isValidCPF(cpfRaw)) throw new Error('CPF inválido');
             if (!birthDate) throw new Error('Data de nascimento é obrigatória');
@@ -2930,13 +3385,9 @@ async function saveModal() {
             if (!plan) throw new Error('Plano é obrigatório');
             if (!startDate) throw new Error('Data de início é obrigatória');
             
-            // 🔥 VERIFICAR SE CPF JÁ EXISTE (IGNORAR O PRÓPRIO EM EDIÇÃO)
             const cpfExists = await checkExistingCPF(cpfRaw, editingId);
-            if (cpfExists) {
-                throw new Error('CPF já cadastrado para outro cliente');
-            }
+            if (cpfExists) throw new Error('CPF já cadastrado para outro cliente');
             
-            // Validar data de nascimento (não pode ser futura)
             if (new Date(birthDate) > new Date()) {
                 throw new Error('Data de nascimento não pode ser futura');
             }
@@ -2950,7 +3401,6 @@ async function saveModal() {
                 }
             }
             
-            // Validar imagem
             let photoBase64 = null;
             if (currentPhotoBase64) {
                 photoBase64 = validateAndSanitizeImageBase64(currentPhotoBase64);
@@ -2960,36 +3410,32 @@ async function saveModal() {
                 userId: currentUserId,
                 name: sanitizeString(name),
                 cpf: cpfRaw,
-                birthDate: birthDate,
+                birthDate,
                 email: sanitizeString(document.getElementById('modalEmail')?.value || ''),
                 phone: phoneRaw,
-                plan: plan,
-                planValue: planValue,
-                startDate: startDate,
-                origin: origin,
+                plan,
+                planValue,
+                startDate,
+                origin,
                 address: sanitizeString(document.getElementById('modalAddress')?.value || ''),
                 cep: sanitizeString(document.getElementById('modalCep')?.value || ''),
                 neighborhood: sanitizeString(document.getElementById('modalNeighborhood')?.value || ''),
                 city: sanitizeString(document.getElementById('modalCity')?.value || ''),
                 status: document.getElementById('modalStatus')?.value || 'active',
                 totalAppointments: 0,
-                photoBase64: photoBase64,
-                updatedAt: new Date().toISOString()
+                photoBase64,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
             
             if (!editingId) {
-                data.createdAt = new Date().toISOString();
+                data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
             }
-        }
-        
-        const collectionName = (type === 'totalpass' || type === 'wellhub') ? 'clients' : type + 's';
-        
-        if (editingId) {
-            // Verificar propriedade antes de atualizar
-            await verifyOwnership(collectionName, editingId);
-            await db.collection(collectionName).doc(editingId).update(data);
-        } else {
-            await db.collection(collectionName).add(data);
+            
+            if (editingId) {
+                await db.collection('clients').doc(editingId).update(data);
+            } else {
+                await db.collection('clients').add(data);
+            }
         }
         
         closeModal();
@@ -3008,7 +3454,7 @@ async function saveModal() {
 }
 
 // ============================================
-// FUNÇÕES DE AÇÃO COM SEGURANÇA
+// FUNÇÕES DE AÇÃO
 // ============================================
 async function deleteItem(type, id) {
     if (!currentUserId) {
@@ -3016,15 +3462,29 @@ async function deleteItem(type, id) {
         return;
     }
     
+    detectDevTools();
+    registerActivity();
+    
     if (!confirm('Tem certeza que deseja excluir permanentemente?')) return;
     
     try {
         // Verificar propriedade antes de excluir
-        await verifyOwnership(type + 's', id);
-        await db.collection(type + 's').doc(id).delete();
+        const docRef = db.collection(type + 's').doc(id);
+        const doc = await docRef.get();
         
-        // Limpar cache
-        cache.clear();
+        if (!doc.exists) {
+            showNotification('Documento não encontrado', 'error');
+            return;
+        }
+        
+        if (doc.data().userId !== currentUserId) {
+            showNotification('Acesso negado a este documento', 'error');
+            return;
+        }
+        
+        await docRef.delete();
+        
+        cache.clearType(type + 's');
         
         showNotification('Excluído com sucesso!', 'success');
         await loadAllData();
@@ -3042,13 +3502,20 @@ async function updateAppointmentStatus(id, status) {
         return;
     }
     
+    detectDevTools();
+    registerActivity();
+    
     try {
-        // Verificar propriedade
-        await verifyOwnership('appointments', id);
+        const docRef = db.collection('appointments').doc(id);
+        const doc = await docRef.get();
         
-        await db.collection('appointments').doc(id).update({ 
+        if (!doc.exists || doc.data().userId !== currentUserId) {
+            throw new Error('Acesso negado');
+        }
+        
+        await docRef.update({ 
             status,
-            updatedAt: new Date().toISOString()
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
         await loadAllData();
@@ -3150,7 +3617,7 @@ function applyFilters() {
 }
 
 // ============================================
-// CSS DO CALENDÁRIO (mantido igual)
+// CSS DO CALENDÁRIO
 // ============================================
 function addCalendarStyles() {
     if (document.getElementById('calendar-styles')) return;
@@ -3482,24 +3949,7 @@ function addCalendarStyles() {
 // ============================================
 function logout() {
     if (confirm('Tem certeza que deseja sair?')) {
-        // Limpar dados sensíveis
-        currentUser = null;
-        currentUserId = null;
-        
-        // Limpar cache
-        cache.clear();
-        
-        // Limpar localStorage (manter apenas tema e idioma)
-        const theme = localStorage.getItem('theme');
-        const language = localStorage.getItem('language');
-        localStorage.clear();
-        if (theme) localStorage.setItem('theme', theme);
-        if (language) localStorage.setItem('language', language);
-        
-        auth.signOut().catch(error => {
-            console.error('Erro ao fazer logout:', error);
-            window.location.href = 'index.html';
-        });
+        forceLogout('Logout manual');
     }
 }
 
@@ -3552,10 +4002,13 @@ document.querySelectorAll('.nav-item').forEach(item => {
 });
 
 // ============================================
-// FUNÇÕES DE RELATÓRIOS (com segurança)
+// FUNÇÕES DE RELATÓRIOS
 // ============================================
 async function loadReportsData() {
     if (!currentUserId) return;
+    
+    detectDevTools();
+    registerActivity();
     
     try {
         const period = document.getElementById('reportPeriod')?.value || '30';
@@ -3603,9 +4056,9 @@ async function loadReportsData() {
         for (const apt of appointments) {
             if (apt.status === 'attended' && apt.serviceId) {
                 try {
-                    const { doc } = await verifyOwnership('services', apt.serviceId, false);
-                    if (doc.exists) {
-                        revenueFromAppointments += doc.data().price || 0;
+                    const serviceDoc = await db.collection('services').doc(apt.serviceId).get();
+                    if (serviceDoc.exists) {
+                        revenueFromAppointments += serviceDoc.data().price || 0;
                     }
                 } catch (e) {
                     secureLog('Erro ao buscar serviço:', e);
@@ -3708,7 +4161,6 @@ function updateReportsCharts(appointments, clients) {
             reportsPieChart.updateSeries(originData);
         }
         
-        // Carregar dados de profissionais para o gráfico de barras
         db.collection('professionals')
             .where('userId', '==', currentUserId)
             .get()
@@ -3805,9 +4257,6 @@ async function updateReportClientsList(clients, appointments) {
             const safePlan = sanitizeString(client.plan || '---');
             const safeOrigin = sanitizeString(client.origin || 'Direto');
             
-            const origemClass = safeOrigin === 'Total Pass' ? 'badge-totalpass' : 
-                               (safeOrigin === 'Well Hub' ? 'badge-wellhub' : '');
-            
             let dataInicioFormatada = '---';
             if (client.startDate) {
                 try {
@@ -3847,7 +4296,7 @@ async function updateReportClientsList(clients, appointments) {
 }
 
 // ============================================
-// GERAR RELATÓRIO INDIVIDUAL (COM SEGURANÇA)
+// GERAR RELATÓRIO INDIVIDUAL
 // ============================================
 async function generateClientReport(clientId) {
     if (!currentUserId) {
@@ -3855,8 +4304,21 @@ async function generateClientReport(clientId) {
         return;
     }
     
+    detectDevTools();
+    registerActivity();
+    
     try {
-        const { doc: clientDoc } = await verifyOwnership('clients', clientId);
+        const clientDoc = await db.collection('clients').doc(clientId).get();
+        if (!clientDoc.exists) {
+            showNotification('Cliente não encontrado', 'error');
+            return;
+        }
+        
+        if (clientDoc.data().userId !== currentUserId) {
+            showNotification('Acesso negado a este cliente', 'error');
+            return;
+        }
+        
         const client = { id: clientDoc.id, ...clientDoc.data() };
         
         const appointmentsSnapshot = await db.collection('appointments')
@@ -3880,9 +4342,9 @@ async function generateClientReport(clientId) {
         for (const apt of appointments) {
             if (apt.status === 'attended' && apt.serviceId) {
                 try {
-                    const { doc } = await verifyOwnership('services', apt.serviceId, false);
-                    if (doc.exists) {
-                        revenue += doc.data().price || 0;
+                    const serviceDoc = await db.collection('services').doc(apt.serviceId).get();
+                    if (serviceDoc.exists) {
+                        revenue += serviceDoc.data().price || 0;
                     }
                 } catch (e) {
                     secureLog('Erro ao buscar serviço');
@@ -4073,13 +4535,16 @@ function closeClientReportModal() {
 }
 
 // ============================================
-// GERAR RELATÓRIO GERAL PDF (COM SEGURANÇA)
+// GERAR RELATÓRIO GERAL PDF
 // ============================================
 async function generateGeneralReport() {
     if (!currentUserId) {
         showNotification('Usuário não autenticado', 'error');
         return;
     }
+    
+    detectDevTools();
+    registerActivity();
     
     try {
         const { jsPDF } = window.jspdf;
@@ -4128,9 +4593,9 @@ async function generateGeneralReport() {
         for (const apt of appointments) {
             if (apt.status === 'attended' && apt.serviceId) {
                 try {
-                    const { doc } = await verifyOwnership('services', apt.serviceId, false);
-                    if (doc.exists) {
-                        totalRevenue += doc.data().price || 0;
+                    const serviceDoc = await db.collection('services').doc(apt.serviceId).get();
+                    if (serviceDoc.exists) {
+                        totalRevenue += serviceDoc.data().price || 0;
                     }
                 } catch (e) {
                     secureLog('Erro ao buscar serviço');
@@ -4228,6 +4693,15 @@ auth.onAuthStateChanged(async user => {
         currentUser = user;
         currentUserId = user.uid;
         
+        detectDevTools();
+        
+        const hasAccess = await verifyAccess();
+        
+        if (!hasAccess) {
+            forceLogout('Acesso negado');
+            return;
+        }
+        
         try {
             const mainElement = document.querySelector('.main');
             const sidebarElement = document.querySelector('.sidebar');
@@ -4236,6 +4710,8 @@ auth.onAuthStateChanged(async user => {
             if (sidebarElement) sidebarElement.style.display = 'flex';
             
             updateUserInterface(user);
+            
+            startSessionMonitor();
             
             await loadAllData();
             initializeCalendar();
@@ -4253,7 +4729,10 @@ auth.onAuthStateChanged(async user => {
         currentUser = null;
         currentUserId = null;
         cache.clear();
-        window.location.href = 'index.html';
+        
+        if (isProtectedPage()) {
+            window.location.href = 'index.html';
+        }
     }
 });
 
@@ -4264,6 +4743,8 @@ document.addEventListener('DOMContentLoaded', function() {
     loadTheme();
     addCalendarStyles();
     loadSavedColors();
+    
+    registerActivity();
     
     appointmentsChart = new ApexCharts(document.querySelector("#appointmentsChart"), {
         series: [
@@ -4606,7 +5087,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// EXPOR FUNÇÕES GLOBALMENTE (APENAS AS NECESSÁRIAS)
+// EXPOR FUNÇÕES GLOBALMENTE
 // ============================================
 window.toggleSidebar = toggleSidebar;
 window.handleGlobalSearch = handleGlobalSearch;
