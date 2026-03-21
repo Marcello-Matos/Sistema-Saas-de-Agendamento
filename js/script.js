@@ -118,11 +118,13 @@ try {
     db = firebase.firestore();
     storage = firebase.storage();
     
+    // Configurar Firestore para usar cache (substitui enablePersistence)
     db.settings({
         cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED,
         ignoreUndefinedProperties: true
     });
     
+    // Habilitar persistência offline (nova forma)
     firebase.firestore().enablePersistence()
         .catch(err => {
             if (err.code === 'failed-precondition') {
@@ -147,12 +149,18 @@ class SecureFirebase {
         this.processingQueue = false;
     }
 
+    /**
+     * Gera token CSRF
+     */
     generateCsrfToken() {
         const token = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
         localStorage.setItem(CSRF_TOKEN_KEY, token);
         return token;
     }
 
+    /**
+     * Obtém token CSRF
+     */
     getCsrfToken() {
         let token = localStorage.getItem(CSRF_TOKEN_KEY);
         if (!token) {
@@ -161,6 +169,9 @@ class SecureFirebase {
         return token;
     }
 
+    /**
+     * Verifica se o usuário tem permissão para acessar um documento
+     */
     async verifyDocumentPermission(collection, docId, operation = 'read') {
         if (!currentUserId) {
             throw new Error('Usuário não autenticado');
@@ -176,7 +187,9 @@ class SecureFirebase {
 
             const data = doc.data();
             
+            // 🔥 Verificação multi-tenant
             if (data.userId && data.userId !== currentUserId) {
+                // Log de tentativa de acesso não autorizado
                 this.logSecurityEvent('unauthorized_access', {
                     collection,
                     docId,
@@ -193,7 +206,11 @@ class SecureFirebase {
         }
     }
 
+    /**
+     * Executa operação com verificação de segurança
+     */
     async secureOperation(operation, ...args) {
+        // Verificações de segurança
         if (devToolsDetected) {
             throw new Error('Acesso negado por questões de segurança');
         }
@@ -202,8 +219,10 @@ class SecureFirebase {
             throw new Error('Muitas requisições. Tente novamente mais tarde.');
         }
 
+        // Registrar atividade
         registerActivity();
 
+        // Adicionar à fila
         return new Promise((resolve, reject) => {
             this.operationQueue.push({
                 operation,
@@ -215,6 +234,9 @@ class SecureFirebase {
         });
     }
 
+    /**
+     * Processa fila de operações
+     */
     async processQueue() {
         if (this.processingQueue) return;
         this.processingQueue = true;
@@ -222,6 +244,7 @@ class SecureFirebase {
         while (this.operationQueue.length > 0) {
             const item = this.operationQueue.shift();
             try {
+                // Executar com timeout
                 const result = await Promise.race([
                     item.operation(...item.args),
                     new Promise((_, reject) => 
@@ -237,9 +260,12 @@ class SecureFirebase {
         this.processingQueue = false;
     }
 
+    /**
+     * Rate limiting
+     */
     checkRateLimit() {
         const now = Date.now();
-        const timeWindow = 60000;
+        const timeWindow = 60000; // 1 minuto
         const maxRequests = MAX_REQUESTS_PER_MINUTE;
 
         if (now - lastRequestTime > timeWindow) {
@@ -256,6 +282,9 @@ class SecureFirebase {
         return true;
     }
 
+    /**
+     * Log de eventos de segurança
+     */
     async logSecurityEvent(eventType, details = {}) {
         if (!currentUserId) return;
 
@@ -269,12 +298,20 @@ class SecureFirebase {
                 url: window.location.href
             };
 
+            // Tentar salvar log (falha silenciosa)
             await db.collection('security_logs').add(eventData).catch(() => {});
         } catch (error) {
             // Silencioso
         }
     }
 
+    // ============================================
+    // 🔥 MÉTODOS SEGUROS PARA CRUD
+    // ============================================
+
+    /**
+     * Buscar coleção com filtro por usuário
+     */
     async getCollection(collectionName) {
         return this.secureOperation(async () => {
             const snapshot = await db.collection(collectionName)
@@ -286,11 +323,16 @@ class SecureFirebase {
                 results.push({ id: doc.id, ...doc.data() });
             });
 
+            // Atualizar cache
             cache.set(collectionName, results);
+
             return results;
         });
     }
 
+    /**
+     * Buscar documento específico
+     */
     async getDocument(collectionName, docId) {
         return this.secureOperation(async () => {
             const { data } = await this.verifyDocumentPermission(collectionName, docId);
@@ -298,8 +340,12 @@ class SecureFirebase {
         });
     }
 
+    /**
+     * Criar documento
+     */
     async createDocument(collectionName, data) {
         return this.secureOperation(async () => {
+            // 🔥 Forçar userId do usuário atual
             const secureData = {
                 ...data,
                 userId: currentUserId,
@@ -310,13 +356,19 @@ class SecureFirebase {
             const docRef = await db.collection(collectionName).add(secureData);
             const newDoc = await docRef.get();
 
+            // Invalidar cache
             cache.clearType(collectionName);
+
             return { id: docRef.id, ...newDoc.data() };
         });
     }
 
+    /**
+     * Atualizar documento
+     */
     async updateDocument(collectionName, docId, data) {
         return this.secureOperation(async () => {
+            // Verificar permissão antes de atualizar
             await this.verifyDocumentPermission(collectionName, docId, 'update');
 
             const secureData = {
@@ -325,44 +377,65 @@ class SecureFirebase {
             };
 
             await db.collection(collectionName).doc(docId).update(secureData);
+            
+            // Invalidar cache
             cache.clearType(collectionName);
+
             return { id: docId, ...data };
         });
     }
 
+    /**
+     * Deletar documento
+     */
     async deleteDocument(collectionName, docId) {
         return this.secureOperation(async () => {
+            // Verificar permissão antes de deletar
             await this.verifyDocumentPermission(collectionName, docId, 'delete');
+
             await db.collection(collectionName).doc(docId).delete();
+            
+            // Invalidar cache
             cache.clearType(collectionName);
+
             return true;
         });
     }
 
+    /**
+     * Buscar com filtros personalizados
+     */
     async queryCollection(collectionName, conditions = []) {
         return this.secureOperation(async () => {
             let query = db.collection(collectionName).where('userId', '==', currentUserId);
 
+            // Aplicar condições adicionais
             conditions.forEach(cond => {
                 query = query.where(cond.field, cond.operator, cond.value);
             });
 
             const snapshot = await query.get();
+
             const results = [];
             snapshot.forEach(doc => {
                 results.push({ id: doc.id, ...doc.data() });
             });
+
             return results;
         });
     }
 }
 
+// 🔥 Instância global do serviço de segurança
 const secureDB = new SecureFirebase();
 
 // ============================================
 // 🔥 FUNÇÕES DE PROTEÇÃO DE ACESSO
 // ============================================
 
+/**
+ * Verifica se a página atual é protegida
+ */
 function isProtectedPage() {
     const currentPath = window.location.pathname.split('/').pop() || '';
     return PROTECTED_PAGES.includes(currentPath) || 
@@ -370,15 +443,24 @@ function isProtectedPage() {
            currentPath.includes('dashboard');
 }
 
+/**
+ * Verifica se a página atual é pública
+ */
 function isPublicPage() {
     const currentPath = window.location.pathname.split('/').pop() || '';
     return ALLOWED_PAGES.includes(currentPath);
 }
 
+/**
+ * Registra atividade do usuário
+ */
 function registerActivity() {
     lastActivityTime = Date.now();
 }
 
+/**
+ * Verifica inatividade do usuário
+ */
 function checkInactivity() {
     const inactiveTime = Date.now() - lastActivityTime;
     if (inactiveTime > MAX_INACTIVITY_TIME) {
@@ -387,6 +469,9 @@ function checkInactivity() {
     }
 }
 
+/**
+ * Monitor de sessão contínuo
+ */
 function startSessionMonitor() {
     if (sessionCheckTimer) {
         clearInterval(sessionCheckTimer);
@@ -409,6 +494,9 @@ function startSessionMonitor() {
     }, SESSION_CHECK_INTERVAL);
 }
 
+/**
+ * Força logout com limpeza completa
+ */
 function forceLogout(reason = '') {
     secureLog('Forçando logout:', reason);
     
@@ -435,6 +523,9 @@ function forceLogout(reason = '') {
     });
 }
 
+// ============================================
+// 🔥 VERIFICAÇÃO DE ACESSO
+// ============================================
 async function verifyAccess() {
     try {
         const firebaseUser = auth.currentUser;
@@ -445,6 +536,7 @@ async function verifyAccess() {
         const token = await firebaseUser.getIdToken(true);
         if (!token) throw new Error('Token inválido');
         
+        // Verificar/criar documento do usuário
         const userDoc = await db.collection('users').doc(firebaseUser.uid).get();
         
         if (!userDoc.exists) {
@@ -483,6 +575,10 @@ async function verifyAccess() {
     }
 }
 
+// ============================================
+// 🔥 FUNÇÕES ANTI-DEVTOOLS
+// ============================================
+
 function detectDevTools() {
     if (!DISABLE_DEVTOOLS) return false;
     
@@ -504,6 +600,10 @@ function handleSecurityBreach(reason) {
     secureDB.logSecurityEvent('security_breach', { reason });
     forceLogout('Violação de segurança detectada');
 }
+
+// ============================================
+// FUNÇÕES DE SEGURANÇA
+// ============================================
 
 function secureLog(...args) {
     if (IS_DEVELOPMENT && !devToolsDetected) {
@@ -661,7 +761,7 @@ function showNotification(message, type = 'info') {
 }
 
 // ============================================
-// FUNÇÕES DE CORES (com validação) - CORRIGIDAS
+// FUNÇÕES DE CORES (com validação)
 // ============================================
 
 const defaultColors = {
@@ -696,7 +796,6 @@ function loadSavedColors() {
     } catch (e) {
         secureLog('Erro ao carregar cores:', e);
     }
-    applyColorsToCSS(defaultColors);
     return defaultColors;
 }
 
@@ -737,117 +836,6 @@ function applyColorsToCSS(colors) {
     localStorage.setItem('nexbook_colors', JSON.stringify(safeColors));
     
     updateAllChartsColors(safeColors);
-    updateAllComponentsColors(safeColors);
-}
-
-function updateAllComponentsColors(colors) {
-    // Atualizar cores de badges de origem na tabela de clientes
-    document.querySelectorAll('#clientsList .badge').forEach(badge => {
-        const text = badge.textContent.trim();
-        if (text === 'Total Pass') {
-            badge.style.background = colors.totalpass;
-        } else if (text === 'Well Hub') {
-            badge.style.background = colors.wellhub;
-        }
-    });
-    
-    // Atualizar cores de badges de origem na tabela de relatórios
-    document.querySelectorAll('#reportClientsList .badge').forEach(badge => {
-        const text = badge.textContent.trim();
-        if (text === 'Total Pass') {
-            badge.style.background = colors.totalpass;
-        } else if (text === 'Well Hub') {
-            badge.style.background = colors.wellhub;
-        }
-    });
-    
-    // Adicionar estilo dinâmico para botões e componentes
-    let dynamicStyle = document.getElementById('dynamic-color-style');
-    if (!dynamicStyle) {
-        dynamicStyle = document.createElement('style');
-        dynamicStyle.id = 'dynamic-color-style';
-        document.head.appendChild(dynamicStyle);
-    }
-    
-    dynamicStyle.textContent = `
-        .btn-primary {
-            background: ${colors.primary} !important;
-            border-color: ${colors.primary} !important;
-        }
-        .btn-primary:hover {
-            background: ${adjustColor(colors.primary, -20)} !important;
-        }
-        .btn-secondary {
-            background: ${colors.secondary} !important;
-            border-color: ${colors.secondary} !important;
-        }
-        .btn-secondary:hover {
-            background: ${adjustColor(colors.secondary, -20)} !important;
-        }
-        .stat-card {
-            border-left-color: ${colors.primary} !important;
-        }
-        .nav-item.active {
-            background: ${colors.primary}20 !important;
-            border-left-color: ${colors.primary} !important;
-        }
-        .nav-item:hover:not(.active) {
-            background: ${colors.primary}10 !important;
-        }
-        .badge.active {
-            background: ${colors.success} !important;
-        }
-        .badge.inactive {
-            background: ${colors.danger} !important;
-        }
-        .start-date-badge {
-            background: ${colors.primary}15 !important;
-            color: ${colors.primary} !important;
-        }
-        .table-actions .btn-secondary {
-            background: ${colors.primary}10 !important;
-            color: ${colors.primary} !important;
-        }
-        .table-actions .btn-secondary:hover {
-            background: ${colors.primary}20 !important;
-        }
-        .action-btn.confirm {
-            background: ${colors.success}20 !important;
-            color: ${colors.success} !important;
-        }
-        .action-btn.attended {
-            background: ${colors.success}20 !important;
-            color: ${colors.success} !important;
-        }
-        .action-btn.absent {
-            background: ${colors.danger}20 !important;
-            color: ${colors.danger} !important;
-        }
-        .action-btn.cancel {
-            background: ${colors.danger}20 !important;
-            color: ${colors.danger} !important;
-        }
-        .appointment-status.status-confirmed {
-            background: ${colors.success}20 !important;
-            color: ${colors.success} !important;
-        }
-        .appointment-status.status-attended {
-            background: ${colors.secondary}20 !important;
-            color: ${colors.secondary} !important;
-        }
-        .appointment-status.status-absent {
-            background: ${colors.danger}20 !important;
-            color: ${colors.danger} !important;
-        }
-        .appointment-status.status-cancelled {
-            background: ${colors.textLight}20 !important;
-            color: ${colors.textLight} !important;
-        }
-        .appointment-status.status-pending {
-            background: ${colors.warning}20 !important;
-            color: ${colors.warning} !important;
-        }
-    `;
 }
 
 function adjustColor(hex, percent) {
@@ -1330,6 +1318,7 @@ async function loadDashboardData() {
         
         secureLog('Carregando dashboard com filtros:', { professionalFilter, serviceFilter });
         
+        // Buscar agendamentos
         let appointmentsQuery = db.collection('appointments').where('userId', '==', currentUserId);
         
         if (professionalFilter !== 'all') {
@@ -1353,6 +1342,7 @@ async function loadDashboardData() {
         
         const todayAppointments = appointments.filter(a => a.date === todayStr);
         
+        // Calcular faturamento do dia
         let todayRevenue = 0;
         for (const apt of todayAppointments) {
             if (apt.serviceId) {
@@ -1367,6 +1357,7 @@ async function loadDashboardData() {
             }
         }
         
+        // Buscar clientes
         const clientsSnapshot = await db.collection('clients')
             .where('userId', '==', currentUserId)
             .get();
@@ -1376,6 +1367,7 @@ async function loadDashboardData() {
             clients.push({ id: doc.id, ...doc.data() });
         });
         
+        // Calcular faturamento mensal
         let monthlyRevenue = 0;
         const clientValues = [];
         
@@ -1682,8 +1674,6 @@ function updateClientsTable(clients) {
         return;
     }
     
-    const colors = loadSavedColors();
-    
     tbody.innerHTML = clients.map(c => {
         const safeName = sanitizeString(c.name || '---');
         const safeEmail = sanitizeString(c.email || '---');
@@ -1704,6 +1694,8 @@ function updateClientsTable(clients) {
                 secureLog('Imagem inválida para cliente', c.id);
             }
         }
+        
+        const colors = loadSavedColors();
         
         let dataNascimentoFormatada = '---';
         if (c.birthDate) {
@@ -1936,6 +1928,7 @@ async function updateAppointmentsList(appointments) {
     list.innerHTML = items.join('');
 }
 
+// Funções auxiliares
 async function getClientName(clientId) {
     if (!clientId || !currentUserId) return 'Cliente';
     try {
@@ -2150,6 +2143,7 @@ function initializeCalendar() {
                 const eventId = info.event.id;
                 const newStart = info.event.start;
                 
+                // Verificar propriedade antes de atualizar
                 const docRef = db.collection('appointments').doc(eventId);
                 const doc = await docRef.get();
                 
@@ -2281,6 +2275,9 @@ function initializeCalendar() {
     calendar.render();
 }
 
+// ============================================
+// FUNÇÃO PARA CARREGAR EVENTOS DO CALENDÁRIO
+// ============================================
 async function loadCalendarEvents(fetchInfo, successCallback, failureCallback) {
     if (!currentUserId) {
         successCallback([]);
@@ -2402,6 +2399,9 @@ async function loadCalendarEvents(fetchInfo, successCallback, failureCallback) {
     }
 }
 
+// ============================================
+// FUNÇÃO PARA MOSTRAR DETALHES DO AGENDAMENTO
+// ============================================
 function showAppointmentDetails(event) {
     const props = event.extendedProps;
     const startTime = event.start ? 
@@ -2744,6 +2744,9 @@ function openModal(type, date = null, time = null) {
     modal.style.display = 'flex';
 }
 
+// ============================================
+// FUNÇÃO GETCLIENTMODALFIELDS
+// ============================================
 function getClientModalFields(origin = 'Direto') {
     const today = new Date().toISOString().split('T')[0];
     
@@ -2847,6 +2850,9 @@ function getClientModalFields(origin = 'Direto') {
     `;
 }
 
+// ============================================
+// FUNÇÃO LOADMODALSELECTS
+// ============================================
 async function loadModalSelects(selected = {}) {
     if (!currentUserId) return;
     
@@ -2995,6 +3001,7 @@ async function editItem(type, id) {
     registerActivity();
     
     try {
+        // Verificar propriedade antes de carregar
         const docRef = db.collection(type + 's').doc(id);
         const doc = await docRef.get();
         
@@ -3461,6 +3468,7 @@ async function deleteItem(type, id) {
     if (!confirm('Tem certeza que deseja excluir permanentemente?')) return;
     
     try {
+        // Verificar propriedade antes de excluir
         const docRef = db.collection(type + 's').doc(id);
         const doc = await docRef.get();
         
@@ -4275,7 +4283,7 @@ async function updateReportClientsList(clients, appointments) {
                             <i class="fas fa-file-pdf"></i> Relatório
                         </button>
                     </td>
-                 </tr>
+                </tr>
             `;
         }));
         
@@ -5077,6 +5085,110 @@ document.addEventListener('DOMContentLoaded', function() {
         loadReportsData();
     }
 });
+
+// ============================================
+// FUNÇÃO PARA ATUALIZAR OS FILTROS COM TRADUÇÃO
+// ============================================
+function updateFilterTranslations() {
+    // Atualiza o texto do option "all" nos selects de filtro
+    const professionalFilter = document.getElementById('professionalFilter');
+    const serviceFilter = document.getElementById('serviceFilter');
+    
+    if (professionalFilter && professionalFilter.options[0]) {
+        const translation = translations[currentLanguage]?.allProfessionals;
+        if (translation) {
+            professionalFilter.options[0].textContent = translation;
+        }
+    }
+    
+    if (serviceFilter && serviceFilter.options[0]) {
+        const translation = translations[currentLanguage]?.allServices;
+        if (translation) {
+            serviceFilter.options[0].textContent = translation;
+        }
+    }
+}
+
+// ============================================
+// MODIFICAR A FUNÇÃO loadFilters
+// ============================================
+// Substitua a função loadFilters existente por esta versão:
+
+async function loadFilters() {
+    if (!currentUserId) return;
+    
+    try {
+        const profSnapshot = await db.collection('professionals')
+            .where('userId', '==', currentUserId)
+            .where('active', '==', true)
+            .get();
+            
+        const profSelect = document.getElementById('professionalFilter');
+        if (profSelect) {
+            const allOptionText = translations[currentLanguage]?.allProfessionals || 'Todos profissionais';
+            profSelect.innerHTML = `<option value="all" data-i18n="allProfessionals">${allOptionText}</option>`;
+            profSnapshot.forEach(doc => {
+                const data = doc.data();
+                const safeName = sanitizeString(data.name);
+                profSelect.innerHTML += `<option value="${doc.id}">${safeName}</option>`;
+            });
+        }
+        
+        const servSnapshot = await db.collection('services')
+            .where('userId', '==', currentUserId)
+            .where('active', '==', true)
+            .get();
+            
+        const servSelect = document.getElementById('serviceFilter');
+        if (servSelect) {
+            const allOptionText = translations[currentLanguage]?.allServices || 'Todos serviços';
+            servSelect.innerHTML = `<option value="all" data-i18n="allServices">${allOptionText}</option>`;
+            servSnapshot.forEach(doc => {
+                const data = doc.data();
+                const safeName = sanitizeString(data.name);
+                servSelect.innerHTML += `<option value="${doc.id}">${safeName}</option>`;
+            });
+        }
+    } catch (error) {
+        console.error('Erro ao carregar filtros:', error);
+    }
+}
+
+// ============================================
+// MODIFICAR A FUNÇÃO updateProfessionalFilter
+// ============================================
+// Substitua a função updateProfessionalFilter existente por esta versão:
+
+function updateProfessionalFilter(professionals) {
+    const select = document.getElementById('professionalFilter');
+    if (select) {
+        const currentValue = select.value;
+        const allOptionText = translations[currentLanguage]?.allProfessionals || 'Todos profissionais';
+        select.innerHTML = `<option value="all" data-i18n="allProfessionals">${allOptionText}</option>`;
+        professionals.filter(p => p.active).forEach(p => {
+            const safeName = sanitizeString(p.name);
+            select.innerHTML += `<option value="${p.id}" ${p.id === currentValue ? 'selected' : ''}>${safeName}</option>`;
+        });
+    }
+}
+
+// ============================================
+// MODIFICAR A FUNÇÃO updateServiceFilter
+// ============================================
+// Substitua a função updateServiceFilter existente por esta versão:
+
+function updateServiceFilter(services) {
+    const select = document.getElementById('serviceFilter');
+    if (select) {
+        const currentValue = select.value;
+        const allOptionText = translations[currentLanguage]?.allServices || 'Todos serviços';
+        select.innerHTML = `<option value="all" data-i18n="allServices">${allOptionText}</option>`;
+        services.filter(s => s.active).forEach(s => {
+            const safeName = sanitizeString(s.name);
+            select.innerHTML += `<option value="${s.id}" ${s.id === currentValue ? 'selected' : ''}>${safeName}</option>`;
+        });
+    }
+}
 
 // ============================================
 // EXPOR FUNÇÕES GLOBALMENTE
