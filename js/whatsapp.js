@@ -379,7 +379,7 @@ function displayAppointmentInfo(appointment, client) {
     infoDiv.innerHTML = `
         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #e2e8f0;">
             <div style="width: 48px; height: 48px; background: #7c3aed; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                <i class="fas fa-user-graduate" style="color: white; font-size: 20px;"></i>
+                <i class="fas fa-user" style="color: white; font-size: 20px;"></i>
             </div>
             <div>
                 <div style="font-weight: 700; font-size: 16px; margin-bottom: 4px;">${clientName}</div>

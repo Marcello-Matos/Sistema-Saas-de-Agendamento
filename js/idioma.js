@@ -39,24 +39,41 @@ const translations = {
         // Gerais
         'search': 'Buscar...',
         'searchClient': 'Buscar aluno...',
+        'searchStudent': 'Buscar aluno...',
         'loading': 'Carregando...',
         'loadingAppointments': 'Carregando agendamentos...',
         'loadingStudents': 'Carregando alunos...',
         'myProfile': 'Meu Perfil',
         'logout': 'Sair',
+        'cancel': 'Cancelar',
+        'save': 'Salvar',
+        'edit': 'Editar',
+        'delete': 'Excluir',
+        'confirm': 'Confirmar',
+        'close': 'Fechar',
         
         // Profissionais
         'name': 'Nome',
         'specialty': 'Especialidade',
+        'email': 'Email',
         'phone': 'Telefone',
         'status': 'Status',
         'actions': 'Ações',
         'newProfessional': 'Novo Profissional',
+        'editProfessional': 'Editar Profissional',
+        'deleteProfessional': 'Excluir Profissional',
+        'professionalStatus': 'Status do Profissional',
+        'active': 'Ativo',
+        'inactive': 'Inativo',
         
         // Serviços
-        'duration': 'Duração',
+        'duration': 'Duração (min)',
         'description': 'Descrição',
+        'price': 'Preço',
         'newService': 'Novo Serviço',
+        'editService': 'Editar Serviço',
+        'deleteService': 'Excluir Serviço',
+        'serviceStatus': 'Status do Serviço',
         
         // Clientes
         'photo': 'Foto',
@@ -67,8 +84,25 @@ const translations = {
         'startDate': 'Data Início',
         'city': 'Cidade',
         'newClient': 'Novo Cliente',
+        'editClient': 'Editar Cliente',
+        'deleteClient': 'Excluir Cliente',
         'totalpass': 'Total Pass',
         'wellhub': 'Well Hub',
+        'direct': 'Direto',
+        'clientStatus': 'Status do Cliente',
+        'cpf': 'CPF',
+        'address': 'Endereço',
+        'neighborhood': 'Bairro',
+        'zipCode': 'CEP',
+        'birthDate': 'Data de Nascimento',
+        'planValue': 'Valor do Plano',
+        
+        // Planos
+        'MENSAL': 'Mensal',
+        'TRIMESTRAL': 'Trimestral',
+        'SEMESTRAL': 'Semestral',
+        'ANUAL': 'Anual',
+        'AVULSO': 'Avulso',
         
         // Relatórios
         'reportsTitle': 'Relatórios e Análises',
@@ -90,7 +124,11 @@ const translations = {
         'appointmentsPeriod': 'Agendamentos no período',
         'studentReport': 'Relatório do Aluno',
         'downloadPDF': 'Download PDF',
-        'close': 'Fechar',
+        'attended': 'Compareceu',
+        'absent': 'Faltou',
+        'pending': 'Pendente',
+        'cancelled': 'Cancelado',
+        'confirmed': 'Confirmado',
         
         // Configurações
         'language': 'Idioma',
@@ -118,7 +156,6 @@ const translations = {
         'acceptPayments': 'Aceitar pagamentos',
         'connect': 'Conectar',
         'setup': 'Configurar',
-        'edit': 'Editar',
         
         // Design
         'designColors': 'Design & Cores',
@@ -151,7 +188,78 @@ const translations = {
         'thursday': 'Quinta',
         'friday': 'Sexta',
         'saturday': 'Sábado',
-        'sunday': 'Domingo'
+        'sunday': 'Domingo',
+        
+        // Meses
+        'january': 'Janeiro',
+        'february': 'Fevereiro',
+        'march': 'Março',
+        'april': 'Abril',
+        'may': 'Maio',
+        'june': 'Junho',
+        'july': 'Julho',
+        'august': 'Agosto',
+        'september': 'Setembro',
+        'october': 'Outubro',
+        'november': 'Novembro',
+        'december': 'Dezembro',
+        
+        // Status dos agendamentos
+        'status_confirmed': 'Confirmado',
+        'status_attended': 'Compareceu',
+        'status_pending': 'Pendente',
+        'status_absent': 'Faltou',
+        'status_cancelled': 'Cancelado',
+        
+        // Botões e ações
+        'filter': 'Filtrar',
+        'clear': 'Limpar',
+        'apply': 'Aplicar',
+        'refresh': 'Atualizar',
+        'export': 'Exportar',
+        'import': 'Importar',
+        'print': 'Imprimir',
+        'view': 'Visualizar',
+        'download': 'Baixar',
+        'upload': 'Enviar',
+        'send': 'Enviar',
+        'receive': 'Receber',
+        
+        // Mensagens
+        'noResults': 'Nenhum resultado encontrado',
+        'loading': 'Carregando...',
+        'error': 'Erro',
+        'success': 'Sucesso',
+        'warning': 'Aviso',
+        'info': 'Informação',
+        'confirmDelete': 'Tem certeza que deseja excluir?',
+        'confirmLogout': 'Tem certeza que deseja sair?',
+        'sessionExpired': 'Sessão expirada',
+        'unauthorized': 'Acesso não autorizado',
+        
+        // Placeholders
+        'searchPlaceholder': 'Buscar...',
+        'searchClientPlaceholder': 'Buscar cliente...',
+        'searchProfessionalPlaceholder': 'Buscar profissional...',
+        'searchServicePlaceholder': 'Buscar serviço...',
+        'enterName': 'Digite o nome',
+        'enterEmail': 'Digite o email',
+        'enterPhone': 'Digite o telefone',
+        'enterCpf': 'Digite o CPF',
+        'enterAddress': 'Digite o endereço',
+        'enterCity': 'Digite a cidade',
+        'enterZipCode': 'Digite o CEP',
+        'enterValue': 'Digite o valor',
+        'enterDescription': 'Digite a descrição',
+        
+        // Títulos de página
+        'pageDashboard': 'Dashboard - NEXBOOK',
+        'pageCalendar': 'Calendário - NEXBOOK',
+        'pageProfessionals': 'Profissionais - NEXBOOK',
+        'pageServices': 'Serviços - NEXBOOK',
+        'pageClients': 'Clientes - NEXBOOK',
+        'pageReports': 'Relatórios - NEXBOOK',
+        'pageSettings': 'Configurações - NEXBOOK'
     },
     
     'en': {
@@ -188,37 +296,71 @@ const translations = {
         
         // General
         'search': 'Search...',
-        'searchClient': 'Search student...',
+        'searchClient': 'Search client...',
+        'searchStudent': 'Search student...',
         'loading': 'Loading...',
         'loadingAppointments': 'Loading appointments...',
         'loadingStudents': 'Loading students...',
         'myProfile': 'My Profile',
         'logout': 'Logout',
+        'cancel': 'Cancel',
+        'save': 'Save',
+        'edit': 'Edit',
+        'delete': 'Delete',
+        'confirm': 'Confirm',
+        'close': 'Close',
         
         // Professionals
         'name': 'Name',
         'specialty': 'Specialty',
+        'email': 'Email',
         'phone': 'Phone',
         'status': 'Status',
         'actions': 'Actions',
         'newProfessional': 'New Professional',
+        'editProfessional': 'Edit Professional',
+        'deleteProfessional': 'Delete Professional',
+        'professionalStatus': 'Professional Status',
+        'active': 'Active',
+        'inactive': 'Inactive',
         
         // Services
-        'duration': 'Duration',
+        'duration': 'Duration (min)',
         'description': 'Description',
+        'price': 'Price',
         'newService': 'New Service',
+        'editService': 'Edit Service',
+        'deleteService': 'Delete Service',
+        'serviceStatus': 'Service Status',
         
         // Clients
         'photo': 'Photo',
-        'birthdate': 'Birth date',
+        'birthdate': 'Birth Date',
         'plan': 'Plan',
         'origin': 'Origin',
         'value': 'Value',
-        'startDate': 'Start date',
+        'startDate': 'Start Date',
         'city': 'City',
         'newClient': 'New Client',
+        'editClient': 'Edit Client',
+        'deleteClient': 'Delete Client',
         'totalpass': 'Total Pass',
         'wellhub': 'Well Hub',
+        'direct': 'Direct',
+        'clientStatus': 'Client Status',
+        'cpf': 'CPF',
+        'address': 'Address',
+        'neighborhood': 'Neighborhood',
+        'zipCode': 'Zip Code',
+        'birthDate': 'Birth Date',
+        'planValue': 'Plan Value',
+        
+        // Plans
+        'MENSAL': 'Monthly',
+        'TRIMESTRAL': 'Quarterly',
+        'SEMESTRAL': 'Semester',
+        'ANUAL': 'Yearly',
+        'AVULSO': 'Single',
         
         // Reports
         'reportsTitle': 'Reports & Analytics',
@@ -240,7 +382,11 @@ const translations = {
         'appointmentsPeriod': 'Appointments in period',
         'studentReport': 'Student Report',
         'downloadPDF': 'Download PDF',
-        'close': 'Close',
+        'attended': 'Attended',
+        'absent': 'Absent',
+        'pending': 'Pending',
+        'cancelled': 'Cancelled',
+        'confirmed': 'Confirmed',
         
         // Settings
         'language': 'Language',
@@ -268,7 +414,6 @@ const translations = {
         'acceptPayments': 'Accept payments',
         'connect': 'Connect',
         'setup': 'Setup',
-        'edit': 'Edit',
         
         // Design
         'designColors': 'Design & Colors',
@@ -301,7 +446,78 @@ const translations = {
         'thursday': 'Thursday',
         'friday': 'Friday',
         'saturday': 'Saturday',
-        'sunday': 'Sunday'
+        'sunday': 'Sunday',
+        
+        // Months
+        'january': 'January',
+        'february': 'February',
+        'march': 'March',
+        'april': 'April',
+        'may': 'May',
+        'june': 'June',
+        'july': 'July',
+        'august': 'August',
+        'september': 'September',
+        'october': 'October',
+        'november': 'November',
+        'december': 'December',
+        
+        // Appointment status
+        'status_confirmed': 'Confirmed',
+        'status_attended': 'Attended',
+        'status_pending': 'Pending',
+        'status_absent': 'Absent',
+        'status_cancelled': 'Cancelled',
+        
+        // Buttons and actions
+        'filter': 'Filter',
+        'clear': 'Clear',
+        'apply': 'Apply',
+        'refresh': 'Refresh',
+        'export': 'Export',
+        'import': 'Import',
+        'print': 'Print',
+        'view': 'View',
+        'download': 'Download',
+        'upload': 'Upload',
+        'send': 'Send',
+        'receive': 'Receive',
+        
+        // Messages
+        'noResults': 'No results found',
+        'loading': 'Loading...',
+        'error': 'Error',
+        'success': 'Success',
+        'warning': 'Warning',
+        'info': 'Info',
+        'confirmDelete': 'Are you sure you want to delete?',
+        'confirmLogout': 'Are you sure you want to logout?',
+        'sessionExpired': 'Session expired',
+        'unauthorized': 'Unauthorized access',
+        
+        // Placeholders
+        'searchPlaceholder': 'Search...',
+        'searchClientPlaceholder': 'Search client...',
+        'searchProfessionalPlaceholder': 'Search professional...',
+        'searchServicePlaceholder': 'Search service...',
+        'enterName': 'Enter name',
+        'enterEmail': 'Enter email',
+        'enterPhone': 'Enter phone',
+        'enterCpf': 'Enter CPF',
+        'enterAddress': 'Enter address',
+        'enterCity': 'Enter city',
+        'enterZipCode': 'Enter zip code',
+        'enterValue': 'Enter value',
+        'enterDescription': 'Enter description',
+        
+        // Page titles
+        'pageDashboard': 'Dashboard - NEXBOOK',
+        'pageCalendar': 'Calendar - NEXBOOK',
+        'pageProfessionals': 'Professionals - NEXBOOK',
+        'pageServices': 'Services - NEXBOOK',
+        'pageClients': 'Clients - NEXBOOK',
+        'pageReports': 'Reports - NEXBOOK',
+        'pageSettings': 'Settings - NEXBOOK'
     },
     
     'es': {
@@ -338,25 +554,42 @@ const translations = {
         
         // Generales
         'search': 'Buscar...',
-        'searchClient': 'Buscar alumno...',
+        'searchClient': 'Buscar cliente...',
+        'searchStudent': 'Buscar alumno...',
         'loading': 'Cargando...',
         'loadingAppointments': 'Cargando citas...',
         'loadingStudents': 'Cargando alumnos...',
         'myProfile': 'Mi Perfil',
         'logout': 'Cerrar sesión',
+        'cancel': 'Cancelar',
+        'save': 'Guardar',
+        'edit': 'Editar',
+        'delete': 'Eliminar',
+        'confirm': 'Confirmar',
+        'close': 'Cerrar',
         
         // Profesionales
         'name': 'Nombre',
         'specialty': 'Especialidad',
+        'email': 'Email',
         'phone': 'Teléfono',
         'status': 'Estado',
         'actions': 'Acciones',
         'newProfessional': 'Nuevo Profesional',
+        'editProfessional': 'Editar Profesional',
+        'deleteProfessional': 'Eliminar Profesional',
+        'professionalStatus': 'Estado del Profesional',
+        'active': 'Activo',
+        'inactive': 'Inactivo',
         
         // Servicios
-        'duration': 'Duración',
+        'duration': 'Duración (min)',
         'description': 'Descripción',
+        'price': 'Precio',
         'newService': 'Nuevo Servicio',
+        'editService': 'Editar Servicio',
+        'deleteService': 'Eliminar Servicio',
+        'serviceStatus': 'Estado del Servicio',
         
         // Clientes
         'photo': 'Foto',
@@ -367,8 +600,25 @@ const translations = {
         'startDate': 'Fecha Inicio',
         'city': 'Ciudad',
         'newClient': 'Nuevo Cliente',
+        'editClient': 'Editar Cliente',
+        'deleteClient': 'Eliminar Cliente',
         'totalpass': 'Total Pass',
         'wellhub': 'Well Hub',
+        'direct': 'Directo',
+        'clientStatus': 'Estado del Cliente',
+        'cpf': 'CPF',
+        'address': 'Dirección',
+        'neighborhood': 'Barrio',
+        'zipCode': 'Código Postal',
+        'birthDate': 'Fecha de Nacimiento',
+        'planValue': 'Valor del Plan',
+        
+        // Planes
+        'MENSAL': 'Mensual',
+        'TRIMESTRAL': 'Trimestral',
+        'SEMESTRAL': 'Semestral',
+        'ANUAL': 'Anual',
+        'AVULSO': 'Individual',
         
         // Informes
         'reportsTitle': 'Informes y Análisis',
@@ -390,7 +640,11 @@ const translations = {
         'appointmentsPeriod': 'Citas en el período',
         'studentReport': 'Informe del Alumno',
         'downloadPDF': 'Descargar PDF',
-        'close': 'Cerrar',
+        'attended': 'Asistió',
+        'absent': 'Faltó',
+        'pending': 'Pendiente',
+        'cancelled': 'Cancelado',
+        'confirmed': 'Confirmado',
         
         // Configuración
         'language': 'Idioma',
@@ -418,7 +672,6 @@ const translations = {
         'acceptPayments': 'Aceptar pagos',
         'connect': 'Conectar',
         'setup': 'Configurar',
-        'edit': 'Editar',
         
         // Diseño
         'designColors': 'Diseño y Colores',
@@ -451,7 +704,78 @@ const translations = {
         'thursday': 'Jueves',
         'friday': 'Viernes',
         'saturday': 'Sábado',
-        'sunday': 'Domingo'
+        'sunday': 'Domingo',
+        
+        // Meses
+        'january': 'Enero',
+        'february': 'Febrero',
+        'march': 'Marzo',
+        'april': 'Abril',
+        'may': 'Mayo',
+        'june': 'Junio',
+        'july': 'Julio',
+        'august': 'Agosto',
+        'september': 'Septiembre',
+        'october': 'Octubre',
+        'november': 'Noviembre',
+        'december': 'Diciembre',
+        
+        // Estado de las citas
+        'status_confirmed': 'Confirmado',
+        'status_attended': 'Asistió',
+        'status_pending': 'Pendiente',
+        'status_absent': 'Faltó',
+        'status_cancelled': 'Cancelado',
+        
+        // Botones y acciones
+        'filter': 'Filtrar',
+        'clear': 'Limpiar',
+        'apply': 'Aplicar',
+        'refresh': 'Actualizar',
+        'export': 'Exportar',
+        'import': 'Importar',
+        'print': 'Imprimir',
+        'view': 'Ver',
+        'download': 'Descargar',
+        'upload': 'Subir',
+        'send': 'Enviar',
+        'receive': 'Recibir',
+        
+        // Mensajes
+        'noResults': 'No se encontraron resultados',
+        'loading': 'Cargando...',
+        'error': 'Error',
+        'success': 'Éxito',
+        'warning': 'Advertencia',
+        'info': 'Información',
+        'confirmDelete': '¿Está seguro que desea eliminar?',
+        'confirmLogout': '¿Está seguro que desea cerrar sesión?',
+        'sessionExpired': 'Sesión expirada',
+        'unauthorized': 'Acceso no autorizado',
+        
+        // Placeholders
+        'searchPlaceholder': 'Buscar...',
+        'searchClientPlaceholder': 'Buscar cliente...',
+        'searchProfessionalPlaceholder': 'Buscar profesional...',
+        'searchServicePlaceholder': 'Buscar servicio...',
+        'enterName': 'Ingrese el nombre',
+        'enterEmail': 'Ingrese el email',
+        'enterPhone': 'Ingrese el teléfono',
+        'enterCpf': 'Ingrese el CPF',
+        'enterAddress': 'Ingrese la dirección',
+        'enterCity': 'Ingrese la ciudad',
+        'enterZipCode': 'Ingrese el código postal',
+        'enterValue': 'Ingrese el valor',
+        'enterDescription': 'Ingrese la descripción',
+        
+        // Títulos de página
+        'pageDashboard': 'Dashboard - NEXBOOK',
+        'pageCalendar': 'Calendario - NEXBOOK',
+        'pageProfessionals': 'Profesionales - NEXBOOK',
+        'pageServices': 'Servicios - NEXBOOK',
+        'pageClients': 'Clientes - NEXBOOK',
+        'pageReports': 'Informes - NEXBOOK',
+        'pageSettings': 'Configuración - NEXBOOK'
     }
 };
 
@@ -459,6 +783,29 @@ const translations = {
 // VARIÁVEL GLOBAL DO IDIOMA ATUAL
 // ======================================
 let currentLanguage = 'pt-BR';
+
+// ======================================
+// FUNÇÃO PARA ATUALIZAR OS FILTROS (TODOS PROFISSIONAIS/TODOS SERVIÇOS)
+// ======================================
+function updateFilterTranslations() {
+    // Atualiza o texto do option "all" nos selects de filtro
+    const professionalFilter = document.getElementById('professionalFilter');
+    const serviceFilter = document.getElementById('serviceFilter');
+    
+    if (professionalFilter && professionalFilter.options[0]) {
+        const translation = translations[currentLanguage]?.allProfessionals;
+        if (translation) {
+            professionalFilter.options[0].textContent = translation;
+        }
+    }
+    
+    if (serviceFilter && serviceFilter.options[0]) {
+        const translation = translations[currentLanguage]?.allServices;
+        if (translation) {
+            serviceFilter.options[0].textContent = translation;
+        }
+    }
+}
 
 // ======================================
 // FUNÇÃO PRINCIPAL DE MUDANÇA DE IDIOMA
@@ -483,6 +830,17 @@ function changeLanguage(lang) {
     
     // Atualiza títulos de páginas
     updatePageTitles(lang);
+    
+    // Atualiza textos de elementos específicos que podem não ter data-i18n
+    updateSpecificElements(lang);
+    
+    // ATUALIZA OS FILTROS (TODOS PROFISSIONAIS/TODOS SERVIÇOS)
+    updateFilterTranslations();
+    
+    // Recarrega os filtros para garantir que os selects tenham os textos atualizados
+    if (typeof loadFilters === 'function') {
+        loadFilters();
+    }
     
     // Dispara evento personalizado para componentes que precisam ser atualizados
     window.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: lang } }));
@@ -539,15 +897,82 @@ function updateAllPlaceholders(lang) {
 // ATUALIZA TÍTULOS DE PÁGINAS
 // ======================================
 function updatePageTitles(lang) {
-    // Atualiza título da aba do navegador
-    const pageTitle = document.querySelector('title');
-    if (pageTitle && pageTitle.hasAttribute('data-i18n')) {
-        const key = pageTitle.getAttribute('data-i18n');
-        const translation = translations[lang]?.[key];
-        if (translation) {
-            pageTitle.textContent = translation;
-        }
+    // Atualiza título da aba do navegador baseado na página atual
+    const currentPath = window.location.pathname.split('/').pop() || 'dashboard.html';
+    let pageKey = 'pageDashboard';
+    
+    if (currentPath.includes('calendar')) pageKey = 'pageCalendar';
+    else if (currentPath.includes('professionals')) pageKey = 'pageProfessionals';
+    else if (currentPath.includes('services')) pageKey = 'pageServices';
+    else if (currentPath.includes('clients')) pageKey = 'pageClients';
+    else if (currentPath.includes('reports')) pageKey = 'pageReports';
+    else if (currentPath.includes('settings')) pageKey = 'pageSettings';
+    
+    const translation = translations[lang]?.[pageKey];
+    if (translation) {
+        document.title = translation;
     }
+}
+
+// ======================================
+// ATUALIZA ELEMENTOS ESPECÍFICOS SEM DATA-I18N
+// ======================================
+function updateSpecificElements(lang) {
+    // Atualiza placeholders de busca que podem não ter o atributo
+    const searchInputs = document.querySelectorAll('input[type="text"][placeholder*="Buscar"], input[type="search"]');
+    searchInputs.forEach(input => {
+        if (input.placeholder.includes('Buscar')) {
+            input.placeholder = translations[lang]?.searchPlaceholder || 'Buscar...';
+        } else if (input.placeholder.includes('Search')) {
+            input.placeholder = translations[lang]?.searchPlaceholder || 'Search...';
+        } else if (input.placeholder.includes('Buscar')) {
+            input.placeholder = translations[lang]?.searchPlaceholder || 'Buscar...';
+        }
+    });
+    
+    // Atualiza títulos de seções em tabelas
+    updateTableHeaders(lang);
+}
+
+// ======================================
+// ATUALIZA CABEÇALHOS DE TABELAS
+// ======================================
+function updateTableHeaders(lang) {
+    // Mapeamento de textos em português para chaves de tradução
+    const headerMap = {
+        'Nome': 'name',
+        'Especialidade': 'specialty',
+        'Email': 'email',
+        'Telefone': 'phone',
+        'Status': 'status',
+        'Ações': 'actions',
+        'Duração': 'duration',
+        'Descrição': 'description',
+        'Preço': 'price',
+        'Foto': 'photo',
+        'Data Nasc.': 'birthdate',
+        'CPF': 'cpf',
+        'Plano': 'plan',
+        'Origem': 'origin',
+        'Valor': 'value',
+        'Data Início': 'startDate',
+        'Cidade': 'city',
+        'Agendamentos': 'appointments',
+        'Comparecimentos': 'attended',
+        'Faltas': 'absent',
+        'Taxa': 'attendanceRate',
+        'Receita': 'revenue'
+    };
+    
+    document.querySelectorAll('th').forEach(th => {
+        const text = th.textContent.trim();
+        if (headerMap[text]) {
+            const translation = translations[lang]?.[headerMap[text]];
+            if (translation) {
+                th.textContent = translation;
+            }
+        }
+    });
 }
 
 // ======================================
@@ -622,6 +1047,25 @@ function applyTranslationsToDynamicContent(container, lang = currentLanguage) {
 }
 
 // ======================================
+// FUNÇÃO PARA FORÇAR ATUALIZAÇÃO DE TODA A INTERFACE
+// ======================================
+function forceRefreshUI() {
+    // Força a atualização de todos os elementos com data-i18n
+    updateAllTranslations(currentLanguage);
+    updateAllPlaceholders(currentLanguage);
+    updatePageTitles(currentLanguage);
+    updateSpecificElements(currentLanguage);
+    
+    // Atualiza os filtros
+    updateFilterTranslations();
+    
+    // Se existirem tabelas com dados dinâmicos, recarregar
+    if (typeof loadAllData === 'function') {
+        loadAllData();
+    }
+}
+
+// ======================================
 // INICIALIZAÇÃO AO CARREGAR A PÁGINA
 // ======================================
 document.addEventListener('DOMContentLoaded', function() {
@@ -659,6 +1103,11 @@ document.addEventListener('DOMContentLoaded', function() {
         childList: true,
         subtree: true
     });
+    
+    // Força atualização inicial após um pequeno delay para garantir que tudo carregou
+    setTimeout(() => {
+        forceRefreshUI();
+    }, 500);
 });
 
 // ======================================
@@ -668,4 +1117,6 @@ window.changeLanguage = changeLanguage;
 window.t = t;
 window.updateTranslation = updateTranslation;
 window.applyTranslationsToDynamicContent = applyTranslationsToDynamicContent;
+window.forceRefreshUI = forceRefreshUI;
+window.updateFilterTranslations = updateFilterTranslations;
 window.currentLanguage = currentLanguage;
