@@ -546,7 +546,10 @@ async function verifyAccess() {
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
                 status: 'active',
-                role: 'user'
+                role: 'user',
+                settings: {
+                    themeColors: null
+                }
             });
         } else {
             const userData = userDoc.data();
@@ -761,7 +764,7 @@ function showNotification(message, type = 'info') {
 }
 
 // ============================================
-// FUNÇÕES DE CORES (com validação)
+// FUNÇÕES DE CORES GLOBAIS (Firebase)
 // ============================================
 
 const defaultColors = {
@@ -781,14 +784,100 @@ function isValidHex(hex) {
     return /^#[0-9A-Fa-f]{6}$/.test(hex);
 }
 
-function loadSavedColors() {
+/**
+ * Salva as cores no Firebase (global)
+ */
+async function saveColorsToFirebase(colors) {
+    if (!currentUserId) {
+        secureLog('Usuário não autenticado, não é possível salvar cores globalmente');
+        return false;
+    }
+    
     try {
+        const userSettingsRef = db.collection('users').doc(currentUserId);
+        
+        // Verificar se o documento existe e atualizar
+        const userDoc = await userSettingsRef.get();
+        
+        if (userDoc.exists) {
+            await userSettingsRef.update({
+                'settings.themeColors': colors,
+                'settings.updatedAt': firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } else {
+            await userSettingsRef.set({
+                settings: {
+                    themeColors: colors,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }
+            });
+        }
+        
+        secureLog('Cores salvas globalmente no Firebase');
+        return true;
+    } catch (error) {
+        console.error('Erro ao salvar cores no Firebase:', error);
+        return false;
+    }
+}
+
+/**
+ * Carrega as cores do Firebase (global)
+ */
+async function loadColorsFromFirebase() {
+    if (!currentUserId) {
+        secureLog('Usuário não autenticado, usando cores padrão');
+        return null;
+    }
+    
+    try {
+        const userDoc = await db.collection('users').doc(currentUserId).get();
+        
+        if (userDoc.exists && userDoc.data().settings?.themeColors) {
+            const colors = userDoc.data().settings.themeColors;
+            
+            // Validar cores antes de aplicar
+            if (colors.primary && isValidHex(colors.primary) &&
+                colors.secondary && isValidHex(colors.secondary) &&
+                colors.background && isValidHex(colors.background)) {
+                
+                secureLog('Cores carregadas globalmente do Firebase');
+                return colors;
+            }
+        }
+        
+        secureLog('Nenhuma cor personalizada encontrada no Firebase');
+        return null;
+    } catch (error) {
+        console.error('Erro ao carregar cores do Firebase:', error);
+        return null;
+    }
+}
+
+/**
+ * Carrega as cores salvas (prioriza Firebase, fallback localStorage)
+ */
+async function loadSavedColors() {
+    try {
+        // Tentar carregar do Firebase primeiro (global)
+        const firebaseColors = await loadColorsFromFirebase();
+        
+        if (firebaseColors) {
+            applyColorsToCSS(firebaseColors);
+            return firebaseColors;
+        }
+        
+        // Fallback: tentar carregar do localStorage (migração)
         const saved = localStorage.getItem('nexbook_colors');
         if (saved) {
             const colors = JSON.parse(saved);
             if (isValidHex(colors.primary) && 
                 isValidHex(colors.secondary) && 
                 isValidHex(colors.background)) {
+                
+                // Migrar cores antigas para o Firebase
+                await saveColorsToFirebase(colors);
                 applyColorsToCSS(colors);
                 return colors;
             }
@@ -833,6 +922,7 @@ function applyColorsToCSS(colors) {
     root.style.setProperty('--totalpass', safeColors.totalpass);
     root.style.setProperty('--wellhub', safeColors.wellhub);
     
+    // Salvar também no localStorage como backup
     localStorage.setItem('nexbook_colors', JSON.stringify(safeColors));
     
     updateAllChartsColors(safeColors);
@@ -874,140 +964,141 @@ function openDesignModal() {
     const modal = document.getElementById('designModal');
     if (!modal) return;
     
-    const currentColors = loadSavedColors();
-    
-    modal.style.display = 'flex';
-    
-    setTimeout(() => {
-        if (!primaryPicker) {
-            primaryPicker = Pickr.create({
-                el: '#primaryColorPicker',
-                theme: 'classic',
-                default: currentColors.primary,
-                components: {
-                    preview: true,
-                    opacity: false,
-                    hue: true,
-                    interaction: {
-                        hex: true,
-                        rgba: false,
-                        hsla: false,
-                        hsva: false,
-                        cmyk: false,
-                        input: true,
-                        clear: false,
-                        save: true
-                    }
-                }
-            });
-            
-            primaryPicker.on('save', (color) => {
-                const hex = color.toHEXA().toString();
-                document.getElementById('primaryColorInput').value = hex;
-                updateColor('primary', hex);
-            });
-        } else {
-            primaryPicker.setColor(currentColors.primary);
-        }
+    // Carregar cores atuais (async)
+    loadSavedColors().then(currentColors => {
+        modal.style.display = 'flex';
         
-        if (!secondaryPicker) {
-            secondaryPicker = Pickr.create({
-                el: '#secondaryColorPicker',
-                theme: 'classic',
-                default: currentColors.secondary,
-                components: {
-                    preview: true,
-                    opacity: false,
-                    hue: true,
-                    interaction: {
-                        hex: true,
-                        rgba: false,
-                        hsla: false,
-                        hsva: false,
-                        cmyk: false,
-                        input: true,
-                        clear: false,
-                        save: true
+        setTimeout(() => {
+            if (!primaryPicker) {
+                primaryPicker = Pickr.create({
+                    el: '#primaryColorPicker',
+                    theme: 'classic',
+                    default: currentColors.primary,
+                    components: {
+                        preview: true,
+                        opacity: false,
+                        hue: true,
+                        interaction: {
+                            hex: true,
+                            rgba: false,
+                            hsla: false,
+                            hsva: false,
+                            cmyk: false,
+                            input: true,
+                            clear: false,
+                            save: true
+                        }
                     }
-                }
-            });
+                });
+                
+                primaryPicker.on('save', (color) => {
+                    const hex = color.toHEXA().toString();
+                    document.getElementById('primaryColorInput').value = hex;
+                    updateColor('primary', hex);
+                });
+            } else {
+                primaryPicker.setColor(currentColors.primary);
+            }
             
-            secondaryPicker.on('save', (color) => {
-                const hex = color.toHEXA().toString();
-                document.getElementById('secondaryColorInput').value = hex;
-                updateColor('secondary', hex);
-            });
-        } else {
-            secondaryPicker.setColor(currentColors.secondary);
-        }
-        
-        if (!backgroundPicker) {
-            backgroundPicker = Pickr.create({
-                el: '#backgroundColorPicker',
-                theme: 'classic',
-                default: currentColors.background,
-                components: {
-                    preview: true,
-                    opacity: false,
-                    hue: true,
-                    interaction: {
-                        hex: true,
-                        rgba: false,
-                        hsla: false,
-                        hsva: false,
-                        cmyk: false,
-                        input: true,
-                        clear: false,
-                        save: true
+            if (!secondaryPicker) {
+                secondaryPicker = Pickr.create({
+                    el: '#secondaryColorPicker',
+                    theme: 'classic',
+                    default: currentColors.secondary,
+                    components: {
+                        preview: true,
+                        opacity: false,
+                        hue: true,
+                        interaction: {
+                            hex: true,
+                            rgba: false,
+                            hsla: false,
+                            hsva: false,
+                            cmyk: false,
+                            input: true,
+                            clear: false,
+                            save: true
+                        }
                     }
-                }
-            });
+                });
+                
+                secondaryPicker.on('save', (color) => {
+                    const hex = color.toHEXA().toString();
+                    document.getElementById('secondaryColorInput').value = hex;
+                    updateColor('secondary', hex);
+                });
+            } else {
+                secondaryPicker.setColor(currentColors.secondary);
+            }
             
-            backgroundPicker.on('save', (color) => {
-                const hex = color.toHEXA().toString();
-                document.getElementById('backgroundColorInput').value = hex;
-                updateColor('background', hex);
-            });
-        } else {
-            backgroundPicker.setColor(currentColors.background);
-        }
-        
-        if (!successPicker) {
-            successPicker = Pickr.create({
-                el: '#successColorPicker',
-                theme: 'classic',
-                default: currentColors.success,
-                components: {
-                    preview: true,
-                    opacity: false,
-                    hue: true,
-                    interaction: {
-                        hex: true,
-                        rgba: false,
-                        hsla: false,
-                        hsva: false,
-                        cmyk: false,
-                        input: true,
-                        clear: false,
-                        save: true
+            if (!backgroundPicker) {
+                backgroundPicker = Pickr.create({
+                    el: '#backgroundColorPicker',
+                    theme: 'classic',
+                    default: currentColors.background,
+                    components: {
+                        preview: true,
+                        opacity: false,
+                        hue: true,
+                        interaction: {
+                            hex: true,
+                            rgba: false,
+                            hsla: false,
+                            hsva: false,
+                            cmyk: false,
+                            input: true,
+                            clear: false,
+                            save: true
+                        }
                     }
-                }
-            });
+                });
+                
+                backgroundPicker.on('save', (color) => {
+                    const hex = color.toHEXA().toString();
+                    document.getElementById('backgroundColorInput').value = hex;
+                    updateColor('background', hex);
+                });
+            } else {
+                backgroundPicker.setColor(currentColors.background);
+            }
             
-            successPicker.on('save', (color) => {
-                const hex = color.toHEXA().toString();
-                document.getElementById('successColorInput').value = hex;
-                updateColor('success', hex);
-            });
-        } else {
-            successPicker.setColor(currentColors.success);
-        }
-        
-        document.getElementById('primaryColorInput').value = currentColors.primary;
-        document.getElementById('secondaryColorInput').value = currentColors.secondary;
-        document.getElementById('backgroundColorInput').value = currentColors.background;
-        document.getElementById('successColorInput').value = currentColors.success;
-    }, 100);
+            if (!successPicker) {
+                successPicker = Pickr.create({
+                    el: '#successColorPicker',
+                    theme: 'classic',
+                    default: currentColors.success,
+                    components: {
+                        preview: true,
+                        opacity: false,
+                        hue: true,
+                        interaction: {
+                            hex: true,
+                            rgba: false,
+                            hsla: false,
+                            hsva: false,
+                            cmyk: false,
+                            input: true,
+                            clear: false,
+                            save: true
+                        }
+                    }
+                });
+                
+                successPicker.on('save', (color) => {
+                    const hex = color.toHEXA().toString();
+                    document.getElementById('successColorInput').value = hex;
+                    updateColor('success', hex);
+                });
+            } else {
+                successPicker.setColor(currentColors.success);
+            }
+            
+            document.getElementById('primaryColorInput').value = currentColors.primary;
+            document.getElementById('secondaryColorInput').value = currentColors.secondary;
+            document.getElementById('backgroundColorInput').value = currentColors.background;
+            document.getElementById('successColorInput').value = currentColors.success;
+        }, 100);
+    });
 }
 
 function closeDesignModal() {
@@ -1015,20 +1106,26 @@ function closeDesignModal() {
     if (modal) modal.style.display = 'none';
 }
 
-function updateColor(type, hex) {
+async function updateColor(type, hex) {
     if (!isValidHex(hex)) {
         showNotification('Cor inválida', 'error');
         return;
     }
     
-    const currentColors = loadSavedColors();
+    const currentColors = await loadSavedColors();
     currentColors[type] = hex;
     applyColorsToCSS(currentColors);
+    
+    // Salvar no Firebase (global)
+    await saveColorsToFirebase(currentColors);
 }
 
-function resetDesignColors() {
+async function resetDesignColors() {
     if (confirm('Tem certeza que deseja resetar todas as cores para o padrão?')) {
         applyColorsToCSS(defaultColors);
+        
+        // Salvar padrão no Firebase
+        await saveColorsToFirebase(defaultColors);
         
         if (primaryPicker) primaryPicker.setColor(defaultColors.primary);
         if (secondaryPicker) secondaryPicker.setColor(defaultColors.secondary);
@@ -1044,9 +1141,10 @@ function resetDesignColors() {
     }
 }
 
-function saveDesignColors() {
+async function saveDesignColors() {
+    // As cores já foram salvas via updateColor, apenas fechar modal
     closeDesignModal();
-    showNotification('Design salvo com sucesso!', 'success');
+    showNotification('Design salvo globalmente com sucesso!', 'success');
 }
 
 function updateAllChartsColors(colors) {
@@ -1554,7 +1652,7 @@ function updateProfessionalsTable(professionals) {
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
-                </td>
+                 </td>
             </tr>
         `;
     }).join('');
@@ -1598,7 +1696,7 @@ function updateServicesTable(services) {
     if (!tbody) return;
     
     if (services.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Nenhum serviço cadastrado</td></tr>';
+        tbody.innerHTML = '<td><td colspan="5" style="text-align: center;">Nenhum serviço cadastrado</td></tr>';
         return;
     }
     
@@ -1624,7 +1722,7 @@ function updateServicesTable(services) {
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
-                </td>
+                 </td>
             </tr>
         `;
     }).join('');
@@ -1674,85 +1772,86 @@ function updateClientsTable(clients) {
         return;
     }
     
-    tbody.innerHTML = clients.map(c => {
-        const safeName = sanitizeString(c.name || '---');
-        const safeEmail = sanitizeString(c.email || '---');
-        const safePhone = sanitizeString(c.phone || '---');
-        const safePlan = sanitizeString(c.plan || '---');
-        const safeOrigin = sanitizeString(c.origin || 'Direto');
-        const safeCity = sanitizeString(c.city || '---');
-        
-        const maskedCpf = maskCPF(c.cpf);
-        
-        let fotoHtml = '<div class="user-avatar" style="width: 40px; height: 40px; font-size: 14px;"><i class="fas fa-user"></i></div>';
-        if (c.photoBase64) {
-            try {
-                if (validateAndSanitizeImageBase64(c.photoBase64)) {
-                    fotoHtml = `<img src="${c.photoBase64}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" alt="Foto de ${safeName}" loading="lazy">`;
+    // Carregar cores de forma assíncrona
+    loadSavedColors().then(colors => {
+        tbody.innerHTML = clients.map(c => {
+            const safeName = sanitizeString(c.name || '---');
+            const safeEmail = sanitizeString(c.email || '---');
+            const safePhone = sanitizeString(c.phone || '---');
+            const safePlan = sanitizeString(c.plan || '---');
+            const safeOrigin = sanitizeString(c.origin || 'Direto');
+            const safeCity = sanitizeString(c.city || '---');
+            
+            const maskedCpf = maskCPF(c.cpf);
+            
+            let fotoHtml = '<div class="user-avatar" style="width: 40px; height: 40px; font-size: 14px;"><i class="fas fa-user"></i></div>';
+            if (c.photoBase64) {
+                try {
+                    if (validateAndSanitizeImageBase64(c.photoBase64)) {
+                        fotoHtml = `<img src="${c.photoBase64}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" alt="Foto de ${safeName}" loading="lazy">`;
+                    }
+                } catch (e) {
+                    secureLog('Imagem inválida para cliente', c.id);
                 }
-            } catch (e) {
-                secureLog('Imagem inválida para cliente', c.id);
             }
-        }
-        
-        const colors = loadSavedColors();
-        
-        let dataNascimentoFormatada = '---';
-        if (c.birthDate) {
-            try {
-                const [ano, mes, dia] = String(c.birthDate).split('-');
-                if (ano && mes && dia) dataNascimentoFormatada = `${dia}/${mes}/${ano}`;
-            } catch (e) {
-                secureLog('Erro ao formatar data nascimento');
+            
+            let dataNascimentoFormatada = '---';
+            if (c.birthDate) {
+                try {
+                    const [ano, mes, dia] = String(c.birthDate).split('-');
+                    if (ano && mes && dia) dataNascimentoFormatada = `${dia}/${mes}/${ano}`;
+                } catch (e) {
+                    secureLog('Erro ao formatar data nascimento');
+                }
             }
-        }
-        
-        let dataInicioFormatada = '---';
-        if (c.startDate) {
-            try {
-                const [ano, mes, dia] = String(c.startDate).split('-');
-                dataInicioFormatada = `${dia}/${mes}/${ano}`;
-            } catch (e) {
-                secureLog('Erro ao formatar data início');
+            
+            let dataInicioFormatada = '---';
+            if (c.startDate) {
+                try {
+                    const [ano, mes, dia] = String(c.startDate).split('-');
+                    dataInicioFormatada = `${dia}/${mes}/${ano}`;
+                } catch (e) {
+                    secureLog('Erro ao formatar data início');
+                }
             }
-        }
+            
+            const valorPlano = c.planValue ? formatCurrency(c.planValue) : '---';
+            const statusClass = c.status === 'active' ? 'active' : 'inactive';
+            const statusText = c.status === 'active' ? 'Ativo' : 'Inativo';
+            
+            return `
+            <tr>
+                <td data-label="Foto">${fotoHtml}</td>
+                <td data-label="Nome">${safeName}</td>
+                <td data-label="Nascimento">${dataNascimentoFormatada}</td>
+                <td data-label="CPF">${maskedCpf}</td>
+                <td data-label="Email">${safeEmail}</td>
+                <td data-label="Telefone">${safePhone}</td>
+                <td data-label="Plano">${safePlan}</td>
+                <td data-label="Origem"><span class="badge" style="background: ${safeOrigin === 'Total Pass' ? colors.totalpass : (safeOrigin === 'Well Hub' ? colors.wellhub : '#6b7280')};">${safeOrigin}</span></td>
+                <td data-label="Valor">${valorPlano}</td>
+                <td data-label="Data Início"><span class="start-date-badge"><i class="fas fa-calendar-alt"></i> ${dataInicioFormatada}</span></td>
+                <td data-label="Cidade">${safeCity}</td>
+                <td data-label="Status"><span class="badge ${statusClass}">${statusText}</span></td>
+                <td data-label="Ações">
+                    <div class="table-actions">
+                        <button class="btn-secondary" onclick="editItem('client', '${c.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-danger" onclick="deleteItem('client', '${c.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button class="btn-secondary" onclick="generateClientReport('${c.id}')">
+                            <i class="fas fa-file-pdf"></i> Relatório
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            `;
+        }).join('');
         
-        const valorPlano = c.planValue ? formatCurrency(c.planValue) : '---';
-        const statusClass = c.status === 'active' ? 'active' : 'inactive';
-        const statusText = c.status === 'active' ? 'Ativo' : 'Inativo';
-        
-        return `
-        <tr>
-            <td data-label="Foto">${fotoHtml}</td>
-            <td data-label="Nome">${safeName}</td>
-            <td data-label="Nascimento">${dataNascimentoFormatada}</td>
-            <td data-label="CPF">${maskedCpf}</td>
-            <td data-label="Email">${safeEmail}</td>
-            <td data-label="Telefone">${safePhone}</td>
-            <td data-label="Plano">${safePlan}</td>
-            <td data-label="Origem"><span class="badge" style="background: ${safeOrigin === 'Total Pass' ? colors.totalpass : (safeOrigin === 'Well Hub' ? colors.wellhub : '#6b7280')};">${safeOrigin}</span></td>
-            <td data-label="Valor">${valorPlano}</td>
-            <td data-label="Data Início"><span class="start-date-badge"><i class="fas fa-calendar-alt"></i> ${dataInicioFormatada}</span></td>
-            <td data-label="Cidade">${safeCity}</td>
-            <td data-label="Status"><span class="badge ${statusClass}">${statusText}</span></td>
-            <td data-label="Ações">
-                <div class="table-actions">
-                    <button class="btn-secondary" onclick="editItem('client', '${c.id}')">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn-danger" onclick="deleteItem('client', '${c.id}')">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                    <button class="btn-secondary" onclick="generateClientReport('${c.id}')">
-                        <i class="fas fa-file-pdf"></i> Relatório
-                    </button>
-                </div>
-            </td>
-        </tr>
-        `;
-    }).join('');
-    
-    if (globalSearchTerm) filterClientsTable();
+        if (globalSearchTerm) filterClientsTable();
+    });
 }
 
 // ============================================
@@ -1846,7 +1945,7 @@ async function updateAppointmentsList(appointments) {
     const upcoming = appointments
         .filter(a => a.date >= today)
         .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
-        .slice(0, 1005);
+        .slice(0, 5);
     
     if (upcoming.length === 0) {
         list.innerHTML = `
@@ -1983,15 +2082,16 @@ function updateCharts(appointments) {
     }
     
     if (appointmentsChart) {
-        const colors = loadSavedColors();
-        appointmentsChart.updateOptions({ 
-            xaxis: { categories },
-            colors: [colors.success, colors.danger]
+        loadSavedColors().then(colors => {
+            appointmentsChart.updateOptions({ 
+                xaxis: { categories },
+                colors: [colors.success, colors.danger]
+            });
+            appointmentsChart.updateSeries([
+                { name: 'Compareceram', data: attendedData },
+                { name: 'Faltaram', data: absentData }
+            ]);
         });
-        appointmentsChart.updateSeries([
-            { name: 'Compareceram', data: attendedData },
-            { name: 'Faltaram', data: absentData }
-        ]);
     }
 }
 
@@ -2022,12 +2122,13 @@ function updatePlansChart(clients) {
         planCounts.AVULSO
     ];
     
-    const colors = loadSavedColors();
-    servicesChart.updateOptions({
-        labels: ['MENSAL', 'TRIMESTRAL', 'SEMESTRAL', 'ANUAL', 'AVULSO'],
-        colors: [colors.primary, colors.secondary, colors.success, colors.warning, colors.danger]
+    loadSavedColors().then(colors => {
+        servicesChart.updateOptions({
+            labels: ['MENSAL', 'TRIMESTRAL', 'SEMESTRAL', 'ANUAL', 'AVULSO'],
+            colors: [colors.primary, colors.secondary, colors.success, colors.warning, colors.danger]
+        });
+        servicesChart.updateSeries(planData);
     });
-    servicesChart.updateSeries(planData);
 }
 
 function updateUserInterface(user) {
@@ -2234,31 +2335,31 @@ function initializeCalendar() {
                 info.event.end.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 
                 props.endTime || '--:--';
             
-            const colors = loadSavedColors();
-            
-            const safeClientName = sanitizeString(props.clientName || 'Cliente');
-            const safeServiceName = sanitizeString(props.serviceName || 'Serviço');
-            const safeProfessionalName = sanitizeString(props.professionalName || 'Profissional');
-            
-            const tooltip = document.createElement('div');
-            tooltip.className = 'event-tooltip';
-            tooltip.id = 'event-tooltip';
-            tooltip.innerHTML = `
-                <div style="font-weight: 600; margin-bottom: 5px;">${safeClientName}</div>
-                <div style="font-size: 11px;">${startTime} - ${endTime}</div>
-                <div style="font-size: 11px; margin-top: 3px;">
-                    <span style="color: ${colors.primary};">${safeServiceName}</span> com ${safeProfessionalName}
-                </div>
-                <div style="font-size: 11px; margin-top: 3px;">
-                    Status: ${getStatusText(props.status)}
-                </div>
-            `;
-            
-            document.body.appendChild(tooltip);
-            
-            const rect = info.el.getBoundingClientRect();
-            tooltip.style.top = rect.top - tooltip.offsetHeight - 5 + 'px';
-            tooltip.style.left = rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2) + 'px';
+            loadSavedColors().then(colors => {
+                const safeClientName = sanitizeString(props.clientName || 'Cliente');
+                const safeServiceName = sanitizeString(props.serviceName || 'Serviço');
+                const safeProfessionalName = sanitizeString(props.professionalName || 'Profissional');
+                
+                const tooltip = document.createElement('div');
+                tooltip.className = 'event-tooltip';
+                tooltip.id = 'event-tooltip';
+                tooltip.innerHTML = `
+                    <div style="font-weight: 600; margin-bottom: 5px;">${safeClientName}</div>
+                    <div style="font-size: 11px;">${startTime} - ${endTime}</div>
+                    <div style="font-size: 11px; margin-top: 3px;">
+                        <span style="color: ${colors.primary};">${safeServiceName}</span> com ${safeProfessionalName}
+                    </div>
+                    <div style="font-size: 11px; margin-top: 3px;">
+                        Status: ${getStatusText(props.status)}
+                    </div>
+                `;
+                
+                document.body.appendChild(tooltip);
+                
+                const rect = info.el.getBoundingClientRect();
+                tooltip.style.top = rect.top - tooltip.offsetHeight - 5 + 'px';
+                tooltip.style.left = rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2) + 'px';
+            });
         },
         
         eventMouseLeave: function() {
@@ -2341,7 +2442,7 @@ async function loadCalendarEvents(fetchInfo, successCallback, failureCallback) {
             }
         });
         
-        const colors = loadSavedColors();
+        const colors = await loadSavedColors();
         
         snapshot.docs.forEach(doc => {
             const data = doc.data();
@@ -2412,149 +2513,149 @@ function showAppointmentDetails(event) {
         event.end.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 
         props.endTime;
     
-    const colors = loadSavedColors();
-    
-    let statusText = '';
-    let statusColor = '';
-    let statusBg = '';
-    
-    if (props.status === 'confirmed') {
-        statusText = '✅ Confirmado';
-        statusColor = colors.success;
-        statusBg = adjustColor(colors.success, 40) + '20';
-    } else if (props.status === 'attended') {
-        statusText = '✅ Compareceu';
-        statusColor = colors.secondary;
-        statusBg = adjustColor(colors.secondary, 40) + '20';
-    } else if (props.status === 'absent') {
-        statusText = '❌ Faltou';
-        statusColor = colors.danger;
-        statusBg = adjustColor(colors.danger, 40) + '20';
-    } else if (props.status === 'pending') {
-        statusText = '⏳ Pendente';
-        statusColor = colors.warning;
-        statusBg = adjustColor(colors.warning, 40) + '20';
-    } else if (props.status === 'cancelled') {
-        statusText = '❌ Cancelado';
-        statusColor = colors.textLight;
-        statusBg = adjustColor(colors.textLight, 40) + '20';
-    }
-    
-    const safeClientName = sanitizeString(props.clientName);
-    const safeServiceName = sanitizeString(props.serviceName);
-    const safeProfessionalName = sanitizeString(props.professionalName);
-    const safeNotes = sanitizeString(props.notes);
-    
-    const detailsHTML = `
-        <div class="modal" id="appointmentDetailsModal" style="display: flex;">
-            <div class="modal-content" style="max-width: 500px;">
-                <h2 style="margin-bottom: 20px; color: ${colors.primary};">
-                    <i class="fas fa-calendar-check"></i> Detalhes do Agendamento
-                </h2>
-                
-                <div style="margin-bottom: 20px;">
-                    <div style="background: ${isColorLight(colors.background) ? '#f3f4f6' : adjustColor(colors.background, 20)}; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
-                        <div style="display: flex; align-items: center;">
-                            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, ${colors.primary}, ${adjustColor(colors.primary, 20)}); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-                                <i class="fas fa-user" style="color: white;"></i>
-                            </div>
-                            <div>
-                                <div style="font-size: 12px; color: ${colors.textLight};">Cliente</div>
-                                <div style="font-size: 18px; font-weight: 600;">${safeClientName}</div>
-                            </div>
-                        </div>
-                    </div>
+    loadSavedColors().then(colors => {
+        let statusText = '';
+        let statusColor = '';
+        let statusBg = '';
+        
+        if (props.status === 'confirmed') {
+            statusText = '✅ Confirmado';
+            statusColor = colors.success;
+            statusBg = adjustColor(colors.success, 40) + '20';
+        } else if (props.status === 'attended') {
+            statusText = '✅ Compareceu';
+            statusColor = colors.secondary;
+            statusBg = adjustColor(colors.secondary, 40) + '20';
+        } else if (props.status === 'absent') {
+            statusText = '❌ Faltou';
+            statusColor = colors.danger;
+            statusBg = adjustColor(colors.danger, 40) + '20';
+        } else if (props.status === 'pending') {
+            statusText = '⏳ Pendente';
+            statusColor = colors.warning;
+            statusBg = adjustColor(colors.warning, 40) + '20';
+        } else if (props.status === 'cancelled') {
+            statusText = '❌ Cancelado';
+            statusColor = colors.textLight;
+            statusBg = adjustColor(colors.textLight, 40) + '20';
+        }
+        
+        const safeClientName = sanitizeString(props.clientName);
+        const safeServiceName = sanitizeString(props.serviceName);
+        const safeProfessionalName = sanitizeString(props.professionalName);
+        const safeNotes = sanitizeString(props.notes);
+        
+        const detailsHTML = `
+            <div class="modal" id="appointmentDetailsModal" style="display: flex;">
+                <div class="modal-content" style="max-width: 500px;">
+                    <h2 style="margin-bottom: 20px; color: ${colors.primary};">
+                        <i class="fas fa-calendar-check"></i> Detalhes do Agendamento
+                    </h2>
                     
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-                        <div style="background: ${isColorLight(colors.background) ? '#f3f4f6' : adjustColor(colors.background, 20)}; padding: 12px; border-radius: 12px;">
-                            <div style="font-size: 12px; color: ${colors.textLight}; margin-bottom: 5px;">
-                                <i class="fas fa-cut"></i> Serviço
+                    <div style="margin-bottom: 20px;">
+                        <div style="background: ${isColorLight(colors.background) ? '#f3f4f6' : adjustColor(colors.background, 20)}; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+                            <div style="display: flex; align-items: center;">
+                                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, ${colors.primary}, ${adjustColor(colors.primary, 20)}); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                                    <i class="fas fa-user" style="color: white;"></i>
+                                </div>
+                                <div>
+                                    <div style="font-size: 12px; color: ${colors.textLight};">Cliente</div>
+                                    <div style="font-size: 18px; font-weight: 600;">${safeClientName}</div>
+                                </div>
                             </div>
-                            <div style="font-weight: 600;">${safeServiceName}</div>
                         </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                            <div style="background: ${isColorLight(colors.background) ? '#f3f4f6' : adjustColor(colors.background, 20)}; padding: 12px; border-radius: 12px;">
+                                <div style="font-size: 12px; color: ${colors.textLight}; margin-bottom: 5px;">
+                                    <i class="fas fa-cut"></i> Serviço
+                                </div>
+                                <div style="font-weight: 600;">${safeServiceName}</div>
+                            </div>
+                            
+                            <div style="background: ${isColorLight(colors.background) ? '#f3f4f6' : adjustColor(colors.background, 20)}; padding: 12px; border-radius: 12px;">
+                                <div style="font-size: 12px; color: ${colors.textLight}; margin-bottom: 5px;">
+                                    <i class="fas fa-user-md"></i> Profissional
+                                </div>
+                                <div style="font-weight: 600;">${safeProfessionalName}</div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                            <div style="background: ${isColorLight(colors.background) ? '#f3f4f6' : adjustColor(colors.background, 20)}; padding: 12px; border-radius: 12px;">
+                                <div style="font-size: 12px; color: ${colors.textLight}; margin-bottom: 5px;">
+                                    <i class="fas fa-clock"></i> Horário
+                                </div>
+                                <div style="font-weight: 600;">${startTime} às ${endTime}</div>
+                            </div>
+                            
+                            <div style="background: ${isColorLight(colors.background) ? '#f3f4f6' : adjustColor(colors.background, 20)}; padding: 12px; border-radius: 12px;">
+                                <div style="font-size: 12px; color: ${colors.textLight}; margin-bottom: 5px;">
+                                    <i class="fas fa-dollar-sign"></i> Valor
+                                </div>
+                                <div style="font-weight: 600;">${formatCurrency(props.servicePrice)}</div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                            <div style="background: ${isColorLight(colors.background) ? '#f3f4f6' : adjustColor(colors.background, 20)}; padding: 12px; border-radius: 12px;">
+                                <div style="font-size: 12px; color: ${colors.textLight}; margin-bottom: 5px;">
+                                    <i class="fas fa-hourglass-half"></i> Duração
+                                </div>
+                                <div style="font-weight: 600;">${props.serviceDuration} minutos</div>
+                            </div>
+                            
+                            <div style="background: ${isColorLight(colors.background) ? '#f3f4f6' : adjustColor(colors.background, 20)}; padding: 12px; border-radius: 12px;">
+                                <div style="font-size: 12px; color: ${colors.textLight}; margin-bottom: 5px;">
+                                    <i class="fas fa-tag"></i> Status
+                                </div>
+                                <div>
+                                    <span class="badge" style="background: ${statusBg}; color: ${statusColor}; padding: 5px 10px; border-radius: 20px; border: 1px solid ${statusColor};">
+                                        ${statusText}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        ${safeNotes ? `
+                            <div style="background: ${isColorLight(colors.background) ? '#f3f4f6' : adjustColor(colors.background, 20)}; padding: 12px; border-radius: 12px; margin-bottom: 15px;">
+                                <div style="font-size: 12px; color: ${colors.textLight}; margin-bottom: 5px;">
+                                    <i class="fas fa-comment"></i> Observações
+                                </div>
+                                <div>${safeNotes}</div>
+                            </div>
+                        ` : ''}
                         
                         <div style="background: ${isColorLight(colors.background) ? '#f3f4f6' : adjustColor(colors.background, 20)}; padding: 12px; border-radius: 12px;">
                             <div style="font-size: 12px; color: ${colors.textLight}; margin-bottom: 5px;">
-                                <i class="fas fa-user-md"></i> Profissional
+                                <i class="fas fa-calendar-day"></i> Data
                             </div>
-                            <div style="font-weight: 600;">${safeProfessionalName}</div>
+                            <div style="font-weight: 600;">${new Date(props.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
                         </div>
                     </div>
                     
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-                        <div style="background: ${isColorLight(colors.background) ? '#f3f4f6' : adjustColor(colors.background, 20)}; padding: 12px; border-radius: 12px;">
-                            <div style="font-size: 12px; color: ${colors.textLight}; margin-bottom: 5px;">
-                                <i class="fas fa-clock"></i> Horário
-                            </div>
-                            <div style="font-weight: 600;">${startTime} às ${endTime}</div>
+                    <div class="modal-actions" style="justify-content: space-between;">
+                        <div>
+                            <button class="btn-secondary" onclick="editItem('appointment', '${event.id}')">
+                                <i class="fas fa-edit"></i> Editar
+                            </button>
+                            <button class="btn-danger" onclick="deleteItem('appointment', '${event.id}')" style="margin-left: 10px;">
+                                <i class="fas fa-trash"></i> Excluir
+                            </button>
                         </div>
-                        
-                        <div style="background: ${isColorLight(colors.background) ? '#f3f4f6' : adjustColor(colors.background, 20)}; padding: 12px; border-radius: 12px;">
-                            <div style="font-size: 12px; color: ${colors.textLight}; margin-bottom: 5px;">
-                                <i class="fas fa-dollar-sign"></i> Valor
-                            </div>
-                            <div style="font-weight: 600;">${formatCurrency(props.servicePrice)}</div>
-                        </div>
-                    </div>
-                    
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-                        <div style="background: ${isColorLight(colors.background) ? '#f3f4f6' : adjustColor(colors.background, 20)}; padding: 12px; border-radius: 12px;">
-                            <div style="font-size: 12px; color: ${colors.textLight}; margin-bottom: 5px;">
-                                <i class="fas fa-hourglass-half"></i> Duração
-                            </div>
-                            <div style="font-weight: 600;">${props.serviceDuration} minutos</div>
-                        </div>
-                        
-                        <div style="background: ${isColorLight(colors.background) ? '#f3f4f6' : adjustColor(colors.background, 20)}; padding: 12px; border-radius: 12px;">
-                            <div style="font-size: 12px; color: ${colors.textLight}; margin-bottom: 5px;">
-                                <i class="fas fa-tag"></i> Status
-                            </div>
-                            <div>
-                                <span class="badge" style="background: ${statusBg}; color: ${statusColor}; padding: 5px 10px; border-radius: 20px; border: 1px solid ${statusColor};">
-                                    ${statusText}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    ${safeNotes ? `
-                        <div style="background: ${isColorLight(colors.background) ? '#f3f4f6' : adjustColor(colors.background, 20)}; padding: 12px; border-radius: 12px; margin-bottom: 15px;">
-                            <div style="font-size: 12px; color: ${colors.textLight}; margin-bottom: 5px;">
-                                <i class="fas fa-comment"></i> Observações
-                            </div>
-                            <div>${safeNotes}</div>
-                        </div>
-                    ` : ''}
-                    
-                    <div style="background: ${isColorLight(colors.background) ? '#f3f4f6' : adjustColor(colors.background, 20)}; padding: 12px; border-radius: 12px;">
-                        <div style="font-size: 12px; color: ${colors.textLight}; margin-bottom: 5px;">
-                            <i class="fas fa-calendar-day"></i> Data
-                        </div>
-                        <div style="font-weight: 600;">${new Date(props.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-                    </div>
-                </div>
-                
-                <div class="modal-actions" style="justify-content: space-between;">
-                    <div>
-                        <button class="btn-secondary" onclick="editItem('appointment', '${event.id}')">
-                            <i class="fas fa-edit"></i> Editar
+                        <button class="btn-primary" onclick="closeAppointmentDetails()">
+                            <i class="fas fa-times"></i> Fechar
                         </button>
-                        <button class="btn-danger" onclick="deleteItem('appointment', '${event.id}')" style="margin-left: 10px;">
-                            <i class="fas fa-trash"></i> Excluir
-                        </button>
                     </div>
-                    <button class="btn-primary" onclick="closeAppointmentDetails()">
-                        <i class="fas fa-times"></i> Fechar
-                    </button>
                 </div>
             </div>
-        </div>
-    `;
-    
-    const oldModal = document.getElementById('appointmentDetailsModal');
-    if (oldModal) oldModal.remove();
-    
-    document.body.insertAdjacentHTML('beforeend', detailsHTML);
+        `;
+        
+        const oldModal = document.getElementById('appointmentDetailsModal');
+        if (oldModal) oldModal.remove();
+        
+        document.body.insertAdjacentHTML('beforeend', detailsHTML);
+    });
 }
 
 function closeAppointmentDetails() {
@@ -3622,326 +3723,326 @@ function applyFilters() {
 function addCalendarStyles() {
     if (document.getElementById('calendar-styles')) return;
     
-    const colors = loadSavedColors();
-    
-    const styleSheet = document.createElement('style');
-    styleSheet.id = 'calendar-styles';
-    styleSheet.textContent = `
-        .fc {
-            font-family: 'Google Sans', 'Roboto', system-ui, sans-serif;
-            background: ${isColorLight(colors.background) ? '#ffffff' : adjustColor(colors.background, 10)};
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-        }
-        
-        .dark-theme .fc {
-            background: ${isColorLight(colors.background) ? adjustColor(colors.background, -20) : colors.background};
-        }
-        
-        .fc-toolbar {
-            margin-bottom: 24px !important;
-        }
-        
-        .fc-toolbar-title {
-            font-size: 1.5rem !important;
-            font-weight: 600 !important;
-            color: ${colors.text};
-        }
-        
-        .dark-theme .fc-toolbar-title {
-            color: ${isColorLight(colors.text) ? colors.text : '#f3f4f6'};
-        }
-        
-        .fc-button {
-            background: transparent !important;
-            border: 1px solid ${colors.borderColor || '#e5e7eb'} !important;
-            color: ${colors.text} !important;
-            font-weight: 500 !important;
-            padding: 8px 16px !important;
-            border-radius: 24px !important;
-            transition: all 0.2s;
-            text-transform: capitalize !important;
-            box-shadow: none !important;
-        }
-        
-        .dark-theme .fc-button {
-            border-color: ${adjustColor(colors.background, 30)} !important;
-            color: ${isColorLight(colors.text) ? colors.text : '#f3f4f6'} !important;
-        }
-        
-        .fc-button:hover {
-            background: ${colors.primary}20 !important;
-            border-color: ${colors.primary} !important;
-        }
-        
-        .fc-button-active {
-            background: ${colors.primary} !important;
-            border-color: ${colors.primary} !important;
-            color: white !important;
-        }
-        
-        .fc-button-active:hover {
-            background: ${adjustColor(colors.primary, -20)} !important;
-        }
-        
-        .fc-col-header-cell {
-            background: ${isColorLight(colors.background) ? '#f9fafb' : adjustColor(colors.background, 10)};
-            padding: 14px 0;
-            font-weight: 600;
-            color: ${colors.text};
-            border: none;
-        }
-        
-        .dark-theme .fc-col-header-cell {
-            background: ${adjustColor(colors.background, -10)};
-            color: ${isColorLight(colors.text) ? colors.text : '#f3f4f6'};
-        }
-        
-        .fc-col-header-cell-cushion {
-            text-decoration: none;
-            color: inherit;
-        }
-        
-        .fc-daygrid-day {
-            border: 1px solid ${colors.borderColor || '#f3f4f6'} !important;
-            transition: background 0.2s;
-        }
-        
-        .dark-theme .fc-daygrid-day {
-            border-color: ${adjustColor(colors.background, 20)} !important;
-        }
-        
-        .fc-daygrid-day:hover {
-            background: ${isColorLight(colors.background) ? '#f9fafb' : adjustColor(colors.background, 10)};
-            cursor: pointer;
-        }
-        
-        .fc-day-today {
-            background: ${colors.primary}10 !important;
-        }
-        
-        .fc-day-today .fc-daygrid-day-number {
-            background: ${colors.primary};
-            color: white !important;
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            margin: 4px;
-        }
-        
-        .fc-daygrid-day-number {
-            color: ${colors.text};
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 500;
-            padding: 8px !important;
-        }
-        
-        .dark-theme .fc-daygrid-day-number {
-            color: ${isColorLight(colors.text) ? colors.text : '#f3f4f6'};
-        }
-        
-        .fc-event {
-            border: none !important;
-            border-radius: 6px !important;
-            padding: 4px 6px !important;
-            font-size: 12px !important;
-            cursor: pointer !important;
-            margin: 2px 0 !important;
-            transition: transform 0.1s, box-shadow 0.1s;
-            font-weight: 500;
-        }
-        
-        .fc-event:hover {
-            transform: scale(1.02);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        
-        .event-status-pending {
-            background: linear-gradient(135deg, ${colors.warning}, ${adjustColor(colors.warning, 20)}) !important;
-        }
-        
-        .event-status-confirmed {
-            background: linear-gradient(135deg, ${colors.success}, ${adjustColor(colors.success, 20)}) !important;
-        }
-        
-        .event-status-attended {
-            background: linear-gradient(135deg, ${colors.secondary}, ${adjustColor(colors.secondary, 20)}) !important;
-        }
-        
-        .event-status-absent {
-            background: linear-gradient(135deg, ${colors.danger}, ${adjustColor(colors.danger, 20)}) !important;
-        }
-        
-        .event-status-cancelled {
-            background: linear-gradient(135deg, ${colors.textLight}, ${adjustColor(colors.textLight, -20)}) !important;
-        }
-        
-        .fc-timegrid-slot {
-            height: 40px !important;
-            border-color: ${colors.borderColor || '#f3f4f6'} !important;
-        }
-        
-        .dark-theme .fc-timegrid-slot {
-            border-color: ${adjustColor(colors.background, 20)} !important;
-        }
-        
-        .fc-timegrid-slot-label {
-            font-size: 12px;
-            color: ${colors.textLight};
-            font-weight: 500;
-        }
-        
-        .dark-theme .fc-timegrid-slot-label {
-            color: ${isColorLight(colors.textLight) ? colors.textLight : '#9ca3af'};
-        }
-        
-        .fc-timegrid-now-indicator-line {
-            border-color: ${colors.primary} !important;
-            border-width: 2px !important;
-        }
-        
-        .fc-timegrid-now-indicator-arrow {
-            border-color: ${colors.primary} !important;
-            color: ${colors.primary} !important;
-        }
-        
-        .fc-scrollgrid {
-            border: 1px solid ${colors.borderColor || '#f3f4f6'} !important;
-            border-radius: 12px;
-            overflow: hidden;
-        }
-        
-        .dark-theme .fc-scrollgrid {
-            border-color: ${adjustColor(colors.background, 20)} !important;
-        }
-        
-        .fc-scrollgrid td {
-            border-color: ${colors.borderColor || '#f3f4f6'} !important;
-        }
-        
-        .dark-theme .fc-scrollgrid td {
-            border-color: ${adjustColor(colors.background, 20)} !important;
-        }
-        
-        .event-tooltip {
-            position: fixed;
-            background: ${isColorLight(colors.background) ? '#ffffff' : adjustColor(colors.background, 10)};
-            color: ${colors.text};
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            border: 1px solid ${colors.borderColor || '#e5e7eb'};
-            z-index: 9999;
-            pointer-events: none;
-            max-width: 250px;
-            animation: fadeIn 0.2s;
-        }
-        
-        .dark-theme .event-tooltip {
-            background: ${adjustColor(colors.background, 10)};
-            color: ${isColorLight(colors.text) ? colors.text : '#f3f4f6'};
-            border-color: ${adjustColor(colors.background, 30)};
-        }
-        
-        .event-tooltip::after {
-            content: '';
-            position: absolute;
-            bottom: -5px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 10px;
-            height: 10px;
-            background: ${isColorLight(colors.background) ? '#ffffff' : adjustColor(colors.background, 10)};
-            border-right: 1px solid ${colors.borderColor || '#e5e7eb'};
-            border-bottom: 1px solid ${colors.borderColor || '#e5e7eb'};
-            transform: translateX(-50%) rotate(45deg);
-        }
-        
-        .dark-theme .event-tooltip::after {
-            background: ${adjustColor(colors.background, 10)};
-            border-color: ${adjustColor(colors.background, 30)};
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .google-notification {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            background: ${isColorLight(colors.background) ? '#ffffff' : adjustColor(colors.background, 10)};
-            color: ${colors.text};
-            padding: 16px 24px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transform: translateY(100px);
-            opacity: 0;
-            transition: all 0.3s;
-            z-index: 10000;
-            border-left: 4px solid ${colors.primary};
-        }
-        
-        .dark-theme .google-notification {
-            background: ${adjustColor(colors.background, 10)};
-            color: ${isColorLight(colors.text) ? colors.text : '#f3f4f6'};
-        }
-        
-        .google-notification.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-        
-        .google-notification.success {
-            border-left-color: ${colors.success};
-        }
-        
-        .google-notification.error {
-            border-left-color: ${colors.danger};
-        }
-        
-        .google-notification i {
-            font-size: 20px;
-        }
-        
-        @media (max-width: 768px) {
+    loadSavedColors().then(colors => {
+        const styleSheet = document.createElement('style');
+        styleSheet.id = 'calendar-styles';
+        styleSheet.textContent = `
+            .fc {
+                font-family: 'Google Sans', 'Roboto', system-ui, sans-serif;
+                background: ${isColorLight(colors.background) ? '#ffffff' : adjustColor(colors.background, 10)};
+                border-radius: 16px;
+                padding: 24px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            }
+            
+            .dark-theme .fc {
+                background: ${isColorLight(colors.background) ? adjustColor(colors.background, -20) : colors.background};
+            }
+            
             .fc-toolbar {
-                flex-direction: column;
-                gap: 16px;
+                margin-bottom: 24px !important;
             }
             
-            .fc-toolbar-chunk {
+            .fc-toolbar-title {
+                font-size: 1.5rem !important;
+                font-weight: 600 !important;
+                color: ${colors.text};
+            }
+            
+            .dark-theme .fc-toolbar-title {
+                color: ${isColorLight(colors.text) ? colors.text : '#f3f4f6'};
+            }
+            
+            .fc-button {
+                background: transparent !important;
+                border: 1px solid ${colors.borderColor || '#e5e7eb'} !important;
+                color: ${colors.text} !important;
+                font-weight: 500 !important;
+                padding: 8px 16px !important;
+                border-radius: 24px !important;
+                transition: all 0.2s;
+                text-transform: capitalize !important;
+                box-shadow: none !important;
+            }
+            
+            .dark-theme .fc-button {
+                border-color: ${adjustColor(colors.background, 30)} !important;
+                color: ${isColorLight(colors.text) ? colors.text : '#f3f4f6'} !important;
+            }
+            
+            .fc-button:hover {
+                background: ${colors.primary}20 !important;
+                border-color: ${colors.primary} !important;
+            }
+            
+            .fc-button-active {
+                background: ${colors.primary} !important;
+                border-color: ${colors.primary} !important;
+                color: white !important;
+            }
+            
+            .fc-button-active:hover {
+                background: ${adjustColor(colors.primary, -20)} !important;
+            }
+            
+            .fc-col-header-cell {
+                background: ${isColorLight(colors.background) ? '#f9fafb' : adjustColor(colors.background, 10)};
+                padding: 14px 0;
+                font-weight: 600;
+                color: ${colors.text};
+                border: none;
+            }
+            
+            .dark-theme .fc-col-header-cell {
+                background: ${adjustColor(colors.background, -10)};
+                color: ${isColorLight(colors.text) ? colors.text : '#f3f4f6'};
+            }
+            
+            .fc-col-header-cell-cushion {
+                text-decoration: none;
+                color: inherit;
+            }
+            
+            .fc-daygrid-day {
+                border: 1px solid ${colors.borderColor || '#f3f4f6'} !important;
+                transition: background 0.2s;
+            }
+            
+            .dark-theme .fc-daygrid-day {
+                border-color: ${adjustColor(colors.background, 20)} !important;
+            }
+            
+            .fc-daygrid-day:hover {
+                background: ${isColorLight(colors.background) ? '#f9fafb' : adjustColor(colors.background, 10)};
+                cursor: pointer;
+            }
+            
+            .fc-day-today {
+                background: ${colors.primary}10 !important;
+            }
+            
+            .fc-day-today .fc-daygrid-day-number {
+                background: ${colors.primary};
+                color: white !important;
+                width: 28px;
+                height: 28px;
                 display: flex;
+                align-items: center;
                 justify-content: center;
-                width: 100%;
-            }
-            
-            .fc .fc-button {
-                padding: 6px 12px !important;
-                font-size: 12px !important;
+                border-radius: 50%;
+                margin: 4px;
             }
             
             .fc-daygrid-day-number {
-                font-size: 12px;
+                color: ${colors.text};
+                text-decoration: none;
+                font-size: 14px;
+                font-weight: 500;
+                padding: 8px !important;
             }
             
-            .fc {
-                padding: 16px;
+            .dark-theme .fc-daygrid-day-number {
+                color: ${isColorLight(colors.text) ? colors.text : '#f3f4f6'};
             }
-        }
-    `;
-    
-    document.head.appendChild(styleSheet);
+            
+            .fc-event {
+                border: none !important;
+                border-radius: 6px !important;
+                padding: 4px 6px !important;
+                font-size: 12px !important;
+                cursor: pointer !important;
+                margin: 2px 0 !important;
+                transition: transform 0.1s, box-shadow 0.1s;
+                font-weight: 500;
+            }
+            
+            .fc-event:hover {
+                transform: scale(1.02);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            }
+            
+            .event-status-pending {
+                background: linear-gradient(135deg, ${colors.warning}, ${adjustColor(colors.warning, 20)}) !important;
+            }
+            
+            .event-status-confirmed {
+                background: linear-gradient(135deg, ${colors.success}, ${adjustColor(colors.success, 20)}) !important;
+            }
+            
+            .event-status-attended {
+                background: linear-gradient(135deg, ${colors.secondary}, ${adjustColor(colors.secondary, 20)}) !important;
+            }
+            
+            .event-status-absent {
+                background: linear-gradient(135deg, ${colors.danger}, ${adjustColor(colors.danger, 20)}) !important;
+            }
+            
+            .event-status-cancelled {
+                background: linear-gradient(135deg, ${colors.textLight}, ${adjustColor(colors.textLight, -20)}) !important;
+            }
+            
+            .fc-timegrid-slot {
+                height: 40px !important;
+                border-color: ${colors.borderColor || '#f3f4f6'} !important;
+            }
+            
+            .dark-theme .fc-timegrid-slot {
+                border-color: ${adjustColor(colors.background, 20)} !important;
+            }
+            
+            .fc-timegrid-slot-label {
+                font-size: 12px;
+                color: ${colors.textLight};
+                font-weight: 500;
+            }
+            
+            .dark-theme .fc-timegrid-slot-label {
+                color: ${isColorLight(colors.textLight) ? colors.textLight : '#9ca3af'};
+            }
+            
+            .fc-timegrid-now-indicator-line {
+                border-color: ${colors.primary} !important;
+                border-width: 2px !important;
+            }
+            
+            .fc-timegrid-now-indicator-arrow {
+                border-color: ${colors.primary} !important;
+                color: ${colors.primary} !important;
+            }
+            
+            .fc-scrollgrid {
+                border: 1px solid ${colors.borderColor || '#f3f4f6'} !important;
+                border-radius: 12px;
+                overflow: hidden;
+            }
+            
+            .dark-theme .fc-scrollgrid {
+                border-color: ${adjustColor(colors.background, 20)} !important;
+            }
+            
+            .fc-scrollgrid td {
+                border-color: ${colors.borderColor || '#f3f4f6'} !important;
+            }
+            
+            .dark-theme .fc-scrollgrid td {
+                border-color: ${adjustColor(colors.background, 20)} !important;
+            }
+            
+            .event-tooltip {
+                position: fixed;
+                background: ${isColorLight(colors.background) ? '#ffffff' : adjustColor(colors.background, 10)};
+                color: ${colors.text};
+                padding: 12px;
+                border-radius: 8px;
+                font-size: 12px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+                border: 1px solid ${colors.borderColor || '#e5e7eb'};
+                z-index: 9999;
+                pointer-events: none;
+                max-width: 250px;
+                animation: fadeIn 0.2s;
+            }
+            
+            .dark-theme .event-tooltip {
+                background: ${adjustColor(colors.background, 10)};
+                color: ${isColorLight(colors.text) ? colors.text : '#f3f4f6'};
+                border-color: ${adjustColor(colors.background, 30)};
+            }
+            
+            .event-tooltip::after {
+                content: '';
+                position: absolute;
+                bottom: -5px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 10px;
+                height: 10px;
+                background: ${isColorLight(colors.background) ? '#ffffff' : adjustColor(colors.background, 10)};
+                border-right: 1px solid ${colors.borderColor || '#e5e7eb'};
+                border-bottom: 1px solid ${colors.borderColor || '#e5e7eb'};
+                transform: translateX(-50%) rotate(45deg);
+            }
+            
+            .dark-theme .event-tooltip::after {
+                background: ${adjustColor(colors.background, 10)};
+                border-color: ${adjustColor(colors.background, 30)};
+            }
+            
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(5px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            
+            .google-notification {
+                position: fixed;
+                bottom: 24px;
+                right: 24px;
+                background: ${isColorLight(colors.background) ? '#ffffff' : adjustColor(colors.background, 10)};
+                color: ${colors.text};
+                padding: 16px 24px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                transform: translateY(100px);
+                opacity: 0;
+                transition: all 0.3s;
+                z-index: 10000;
+                border-left: 4px solid ${colors.primary};
+            }
+            
+            .dark-theme .google-notification {
+                background: ${adjustColor(colors.background, 10)};
+                color: ${isColorLight(colors.text) ? colors.text : '#f3f4f6'};
+            }
+            
+            .google-notification.show {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            
+            .google-notification.success {
+                border-left-color: ${colors.success};
+            }
+            
+            .google-notification.error {
+                border-left-color: ${colors.danger};
+            }
+            
+            .google-notification i {
+                font-size: 20px;
+            }
+            
+            @media (max-width: 768px) {
+                .fc-toolbar {
+                    flex-direction: column;
+                    gap: 16px;
+                }
+                
+                .fc-toolbar-chunk {
+                    display: flex;
+                    justify-content: center;
+                    width: 100%;
+                }
+                
+                .fc .fc-button {
+                    padding: 6px 12px !important;
+                    font-size: 12px !important;
+                }
+                
+                .fc-daygrid-day-number {
+                    font-size: 12px;
+                }
+                
+                .fc {
+                    padding: 16px;
+                }
+            }
+        `;
+        
+        document.head.appendChild(styleSheet);
+    });
 }
 
 // ============================================
@@ -4103,113 +4204,112 @@ async function loadReportsData() {
 
 function updateReportsCharts(appointments, clients) {
     try {
-        const colors = loadSavedColors();
-        
-        const last30Days = [];
-        const dates = [];
-        
-        for (let i = 29; i >= 0; i--) {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toISOString().split('T')[0];
-            dates.push(date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }));
+        loadSavedColors().then(colors => {
+            const last30Days = [];
+            const dates = [];
             
-            const dayAppointments = appointments.filter(a => a.date === dateStr).length;
-            last30Days.push(dayAppointments);
-        }
-        
-        if (reportsLineChart) {
-            reportsLineChart.updateOptions({
-                xaxis: { 
-                    categories: dates,
-                    labels: { rotate: -45, rotateAlways: false }
-                },
-                colors: [colors.primary]
-            });
-            reportsLineChart.updateSeries([{
-                name: 'Agendamentos',
-                data: last30Days
-            }]);
-        }
-        
-        const origins = {
-            'Direto': 0,
-            'Total Pass': 0,
-            'Well Hub': 0
-        };
-        
-        clients.forEach(c => {
-            const origin = c.origin || 'Direto';
-            if (origins.hasOwnProperty(origin)) {
-                origins[origin]++;
-            } else {
-                origins['Direto']++;
+            for (let i = 29; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+                dates.push(date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }));
+                
+                const dayAppointments = appointments.filter(a => a.date === dateStr).length;
+                last30Days.push(dayAppointments);
             }
-        });
-        
-        const originLabels = Object.keys(origins).filter(key => origins[key] > 0);
-        const originData = originLabels.map(key => origins[key]);
-        
-        if (reportsPieChart) {
-            reportsPieChart.updateOptions({
-                labels: originLabels,
-                colors: originLabels.map(label => 
-                    label === 'Total Pass' ? colors.totalpass : 
-                    label === 'Well Hub' ? colors.wellhub : colors.warning
-                )
-            });
-            reportsPieChart.updateSeries(originData);
-        }
-        
-        db.collection('professionals')
-            .where('userId', '==', currentUserId)
-            .get()
-            .then(profSnapshot => {
-                const professionals = [];
-                profSnapshot.forEach(doc => {
-                    professionals.push({ id: doc.id, name: doc.data().name });
+            
+            if (reportsLineChart) {
+                reportsLineChart.updateOptions({
+                    xaxis: { 
+                        categories: dates,
+                        labels: { rotate: -45, rotateAlways: false }
+                    },
+                    colors: [colors.primary]
                 });
-                
-                const professionalMap = new Map();
-                appointments.forEach(apt => {
-                    if (apt.professionalId) {
-                        const count = professionalMap.get(apt.professionalId) || 0;
-                        professionalMap.set(apt.professionalId, count + 1);
-                    }
-                });
-                
-                const professionalNames = [];
-                const professionalCounts = [];
-                
-                const sortedProfessionals = [...professionalMap.entries()]
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 10);
-                
-                sortedProfessionals.forEach(([id, count]) => {
-                    const prof = professionals.find(p => p.id === id);
-                    const name = prof ? sanitizeString(prof.name) : `Profissional ${id.substring(0, 4)}`;
-                    professionalNames.push(name);
-                    professionalCounts.push(count);
-                });
-                
-                if (reportsBarChart) {
-                    reportsBarChart.updateOptions({
-                        xaxis: { 
-                            categories: professionalNames,
-                            labels: { rotate: -45, rotateAlways: false, trim: true }
-                        },
-                        colors: [colors.secondary]
-                    });
-                    reportsBarChart.updateSeries([{
-                        name: 'Agendamentos',
-                        data: professionalCounts
-                    }]);
+                reportsLineChart.updateSeries([{
+                    name: 'Agendamentos',
+                    data: last30Days
+                }]);
+            }
+            
+            const origins = {
+                'Direto': 0,
+                'Total Pass': 0,
+                'Well Hub': 0
+            };
+            
+            clients.forEach(c => {
+                const origin = c.origin || 'Direto';
+                if (origins.hasOwnProperty(origin)) {
+                    origins[origin]++;
+                } else {
+                    origins['Direto']++;
                 }
-            })
-            .catch(error => {
-                console.error('Erro ao buscar profissionais:', error);
             });
             
+            const originLabels = Object.keys(origins).filter(key => origins[key] > 0);
+            const originData = originLabels.map(key => origins[key]);
+            
+            if (reportsPieChart) {
+                reportsPieChart.updateOptions({
+                    labels: originLabels,
+                    colors: originLabels.map(label => 
+                        label === 'Total Pass' ? colors.totalpass : 
+                        label === 'Well Hub' ? colors.wellhub : colors.warning
+                    )
+                });
+                reportsPieChart.updateSeries(originData);
+            }
+            
+            db.collection('professionals')
+                .where('userId', '==', currentUserId)
+                .get()
+                .then(profSnapshot => {
+                    const professionals = [];
+                    profSnapshot.forEach(doc => {
+                        professionals.push({ id: doc.id, name: doc.data().name });
+                    });
+                    
+                    const professionalMap = new Map();
+                    appointments.forEach(apt => {
+                        if (apt.professionalId) {
+                            const count = professionalMap.get(apt.professionalId) || 0;
+                            professionalMap.set(apt.professionalId, count + 1);
+                        }
+                    });
+                    
+                    const professionalNames = [];
+                    const professionalCounts = [];
+                    
+                    const sortedProfessionals = [...professionalMap.entries()]
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 10);
+                    
+                    sortedProfessionals.forEach(([id, count]) => {
+                        const prof = professionals.find(p => p.id === id);
+                        const name = prof ? sanitizeString(prof.name) : `Profissional ${id.substring(0, 4)}`;
+                        professionalNames.push(name);
+                        professionalCounts.push(count);
+                    });
+                    
+                    if (reportsBarChart) {
+                        reportsBarChart.updateOptions({
+                            xaxis: { 
+                                categories: professionalNames,
+                                labels: { rotate: -45, rotateAlways: false, trim: true }
+                            },
+                            colors: [colors.secondary]
+                        });
+                        reportsBarChart.updateSeries([{
+                            name: 'Agendamentos',
+                            data: professionalCounts
+                        }]);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao buscar profissionais:', error);
+                });
+        });
     } catch (error) {
         console.error('Erro ao atualizar gráficos:', error);
     }
@@ -4234,7 +4334,7 @@ async function updateReportClientsList(clients, appointments) {
             services[doc.id] = doc.data();
         });
         
-        const colors = loadSavedColors();
+        const colors = await loadSavedColors();
         const clientRows = await Promise.all(clients.map(async client => {
             const clientAppointments = appointments.filter(a => a.clientId === client.id);
             const total = clientAppointments.length;
@@ -4356,7 +4456,7 @@ async function generateClientReport(clientId) {
             revenue += client.planValue;
         }
         
-        const colors = loadSavedColors();
+        const colors = await loadSavedColors();
         
         const content = document.getElementById('clientReportContent');
         const title = document.getElementById('clientReportTitle');
@@ -4550,7 +4650,7 @@ async function generateGeneralReport() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('landscape');
         
-        const colors = loadSavedColors();
+        const colors = await loadSavedColors();
         
         doc.setFontSize(18);
         doc.setTextColor(parseInt(colors.primary.slice(1,3), 16), parseInt(colors.primary.slice(3,5), 16), parseInt(colors.primary.slice(5,7), 16));
@@ -4713,10 +4813,12 @@ auth.onAuthStateChanged(async user => {
             
             startSessionMonitor();
             
+            // Carregar cores do Firebase primeiro
+            await loadSavedColors();
+            
             await loadAllData();
             initializeCalendar();
             adjustTablesForMobile();
-            loadSavedColors();
             
             showNotification(`Bem-vindo, ${user.displayName || user.email}!`, 'success');
             
@@ -4742,7 +4844,6 @@ auth.onAuthStateChanged(async user => {
 document.addEventListener('DOMContentLoaded', function() {
     loadTheme();
     addCalendarStyles();
-    loadSavedColors();
     
     registerActivity();
     
@@ -5085,110 +5186,6 @@ document.addEventListener('DOMContentLoaded', function() {
         loadReportsData();
     }
 });
-
-// ============================================
-// FUNÇÃO PARA ATUALIZAR OS FILTROS COM TRADUÇÃO
-// ============================================
-function updateFilterTranslations() {
-    // Atualiza o texto do option "all" nos selects de filtro
-    const professionalFilter = document.getElementById('professionalFilter');
-    const serviceFilter = document.getElementById('serviceFilter');
-    
-    if (professionalFilter && professionalFilter.options[0]) {
-        const translation = translations[currentLanguage]?.allProfessionals;
-        if (translation) {
-            professionalFilter.options[0].textContent = translation;
-        }
-    }
-    
-    if (serviceFilter && serviceFilter.options[0]) {
-        const translation = translations[currentLanguage]?.allServices;
-        if (translation) {
-            serviceFilter.options[0].textContent = translation;
-        }
-    }
-}
-
-// ============================================
-// MODIFICAR A FUNÇÃO loadFilters
-// ============================================
-// Substitua a função loadFilters existente por esta versão:
-
-async function loadFilters() {
-    if (!currentUserId) return;
-    
-    try {
-        const profSnapshot = await db.collection('professionals')
-            .where('userId', '==', currentUserId)
-            .where('active', '==', true)
-            .get();
-            
-        const profSelect = document.getElementById('professionalFilter');
-        if (profSelect) {
-            const allOptionText = translations[currentLanguage]?.allProfessionals || 'Todos profissionais';
-            profSelect.innerHTML = `<option value="all" data-i18n="allProfessionals">${allOptionText}</option>`;
-            profSnapshot.forEach(doc => {
-                const data = doc.data();
-                const safeName = sanitizeString(data.name);
-                profSelect.innerHTML += `<option value="${doc.id}">${safeName}</option>`;
-            });
-        }
-        
-        const servSnapshot = await db.collection('services')
-            .where('userId', '==', currentUserId)
-            .where('active', '==', true)
-            .get();
-            
-        const servSelect = document.getElementById('serviceFilter');
-        if (servSelect) {
-            const allOptionText = translations[currentLanguage]?.allServices || 'Todos serviços';
-            servSelect.innerHTML = `<option value="all" data-i18n="allServices">${allOptionText}</option>`;
-            servSnapshot.forEach(doc => {
-                const data = doc.data();
-                const safeName = sanitizeString(data.name);
-                servSelect.innerHTML += `<option value="${doc.id}">${safeName}</option>`;
-            });
-        }
-    } catch (error) {
-        console.error('Erro ao carregar filtros:', error);
-    }
-}
-
-// ============================================
-// MODIFICAR A FUNÇÃO updateProfessionalFilter
-// ============================================
-// Substitua a função updateProfessionalFilter existente por esta versão:
-
-function updateProfessionalFilter(professionals) {
-    const select = document.getElementById('professionalFilter');
-    if (select) {
-        const currentValue = select.value;
-        const allOptionText = translations[currentLanguage]?.allProfessionals || 'Todos profissionais';
-        select.innerHTML = `<option value="all" data-i18n="allProfessionals">${allOptionText}</option>`;
-        professionals.filter(p => p.active).forEach(p => {
-            const safeName = sanitizeString(p.name);
-            select.innerHTML += `<option value="${p.id}" ${p.id === currentValue ? 'selected' : ''}>${safeName}</option>`;
-        });
-    }
-}
-
-// ============================================
-// MODIFICAR A FUNÇÃO updateServiceFilter
-// ============================================
-// Substitua a função updateServiceFilter existente por esta versão:
-
-function updateServiceFilter(services) {
-    const select = document.getElementById('serviceFilter');
-    if (select) {
-        const currentValue = select.value;
-        const allOptionText = translations[currentLanguage]?.allServices || 'Todos serviços';
-        select.innerHTML = `<option value="all" data-i18n="allServices">${allOptionText}</option>`;
-        services.filter(s => s.active).forEach(s => {
-            const safeName = sanitizeString(s.name);
-            select.innerHTML += `<option value="${s.id}" ${s.id === currentValue ? 'selected' : ''}>${safeName}</option>`;
-        });
-    }
-}
 
 // ============================================
 // EXPOR FUNÇÕES GLOBALMENTE
