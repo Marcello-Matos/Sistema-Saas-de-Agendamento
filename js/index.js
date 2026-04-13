@@ -1,6 +1,4 @@
-
-    
-    /* ══════════════════════════════════════════
+/* ══════════════════════════════════════════
        FIREBASE CONFIGURATION
        ══════════════════════════════════════════ */
    
@@ -30,8 +28,9 @@
         ).catch(console.error);
 
         // Auth state observer
+        // FIX #1: Adicionado guard para evitar loop de redirect no dashboard
         auth.onAuthStateChanged(user => {
-            if (user) {
+            if (user && !window.location.pathname.includes('dashboard')) {
                 console.log('✅ Usuário autenticado:', user.displayName || user.email);
                 showToast('success', 'Autenticado!', `Bem-vindo, ${user.displayName || user.email}`);
                 setTimeout(() => {
@@ -250,7 +249,7 @@
         if (!firebaseReady) { setTimeout(() => { setLoading(btn,false); demoLogin(email.split('@')[0]); }, 1200); return; }
 
         try {
-            if (firebaseReady) await auth.setPersistence(persist);
+            await auth.setPersistence(persist);
             await auth.signInWithEmailAndPassword(email, password);
             // onAuthStateChanged handles redirect
         } catch (err) {
@@ -441,47 +440,63 @@
         }
     });
 
+    /* ══════════════════════════════════════════
+       TEST NOTIFICATION
+       FIX #2: currentUserId buscado do auth.currentUser
+       FIX #3: showToast chamado com assinatura correta (type, title, message)
+       FIX #4: chave } solta removida
+       ══════════════════════════════════════════ */
+    async function testNotification() {
+        // FIX #2: usar auth.currentUser em vez de variável inexistente
+        const currentUserId = auth && auth.currentUser ? auth.currentUser.uid : null;
 
-
-    // Adicione no script.js
-async function testNotification() {
-    if (!currentUserId) return;
-    
-    // Buscar o último agendamento
-    const snapshot = await db.collection('appointments')
-        .where('userId', '==', currentUserId)
-        .orderBy('createdAt', 'desc')
-        .limit(1)
-        .get();
-    
-    if (snapshot.empty) {
-        alert('Crie um agendamento primeiro');
-        return;
-    }
-    
-    const appointment = snapshot.docs[0];
-    
-    // Chamar nossa função de teste HTTP
-    try {
-        const response = await fetch('https://us-central1-nexbook-14d69.cloudfunctions.net/testEmail', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                appointmentId: appointment.id
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showToast('✅ Notificação de teste simulada com sucesso!');
-        } else {
-            showToast('❌ Erro: ' + result.error, 'error');
+        if (!currentUserId) {
+            showToast('warn', 'Atenção', 'Você precisa estar logado para testar notificações.');
+            return;
         }
-    } catch (error) {
-        console.error('Erro:', error);
-        showToast('❌ Erro ao testar notificação', 'error');
+
+        // Buscar o último agendamento
+        let snapshot;
+        try {
+            snapshot = await db.collection('appointments')
+                .where('userId', '==', currentUserId)
+                .orderBy('createdAt', 'desc')
+                .limit(1)
+                .get();
+        } catch (err) {
+            showToast('error', 'Erro', 'Falha ao buscar agendamentos: ' + err.message);
+            return;
+        }
+
+        if (snapshot.empty) {
+            showToast('warn', 'Atenção', 'Crie um agendamento primeiro.');
+            return;
+        }
+
+        const appointment = snapshot.docs[0];
+
+        try {
+            const response = await fetch('https://us-central1-nexbook-14d69.cloudfunctions.net/testEmail', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    appointmentId: appointment.id
+                })
+            });
+
+            const result = await response.json();
+
+            // FIX #3: assinatura correta de showToast (type, title, message)
+            if (result.success) {
+                showToast('success', 'Sucesso', 'Notificação de teste simulada com sucesso!');
+            } else {
+                showToast('error', 'Erro', result.error || 'Erro desconhecido.');
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            showToast('error', 'Erro', 'Falha ao testar notificação: ' + error.message);
+        }
     }
-}
+    // FIX #4: chave } solta que existia aqui foi removida
