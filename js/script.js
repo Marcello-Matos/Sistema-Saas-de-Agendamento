@@ -1,4 +1,16 @@
 // ============================================
+// 🔥 VERIFICAÇÃO DE DUPLICAÇÃO
+// ============================================
+if (window.firebaseInitialized) {
+    console.warn('Firebase já foi inicializado, ignorando...');
+} else {
+    window.firebaseInitialized = true;
+    
+    // Seu código de inicialização aqui
+}
+
+
+// ============================================
 // FIREBASE CONFIG E CONSTANTES DE SEGURANÇA
 // ============================================
 const firebaseConfig = {
