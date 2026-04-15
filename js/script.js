@@ -3686,7 +3686,13 @@ function loadTheme() {
 }
 
 function toggleUserDropdown() {
-    document.getElementById('userDropdown').classList.toggle('show');
+    const dropdown = document.getElementById('userDropdown');
+    const userBtn = document.querySelector('.user');
+    if (!dropdown || !userBtn) return;
+    const rect = userBtn.getBoundingClientRect();
+    dropdown.style.top = (rect.bottom + 8) + 'px';
+    dropdown.style.right = (window.innerWidth - rect.right) + 'px';
+    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
 }
 
 document.addEventListener('click', (e) => {
@@ -4811,6 +4817,7 @@ auth.onAuthStateChanged(async user => {
     if (user) {
         currentUser = user;
         currentUserId = user.uid;
+        window.currentUserId = user.uid; // expor para outros scripts
         
         detectDevTools();
         
@@ -4837,6 +4844,7 @@ auth.onAuthStateChanged(async user => {
             
             await loadAllData();
             initializeCalendar();
+            if (typeof window.loadRealInsights === 'function') setTimeout(window.loadRealInsights, 1000);
             adjustTablesForMobile();
             
             showNotification(`Bem-vindo, ${user.displayName || user.email}!`, 'success');

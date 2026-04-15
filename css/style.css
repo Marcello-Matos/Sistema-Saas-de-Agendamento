@@ -1,4 +1,4 @@
-* {
+﻿* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -413,9 +413,9 @@ body {
 }
 
 .user-dropdown {
-    position: absolute;
-    top: calc(var(--header-height) + 10px);
-    right: 32px;
+    position: fixed;
+    top: 70px;
+    right: 20px;
     background: var(--background-card);
     border: 1px solid var(--border-color);
     border-radius: 16px;
@@ -423,7 +423,7 @@ body {
     min-width: 200px;
     box-shadow: var(--shadow-lg);
     display: none;
-    z-index: 1000;
+    z-index: 99999;
 }
 
 .user-dropdown.show {
@@ -2395,7 +2395,7 @@ body.dark-theme .form-group input[type="date"]::-webkit-calendar-picker-indicato
 /* Scrollbar */
 .content {
     scrollbar-width: thin;
-    scrollbar-color: var(--primary) var(--background-tertiary);
+    scrollbar-color: var(--primary-light, #a5b4fc) var(--background-tertiary);
 }
 
 .content::-webkit-scrollbar {

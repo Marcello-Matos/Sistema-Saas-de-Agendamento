@@ -1,4 +1,4 @@
-            *, *::before, *::after { 
+﻿            *, *::before, *::after { 
                 margin: 0; 
                 padding: 0; 
                 box-sizing: border-box; 
@@ -947,3 +947,128 @@
                 }
             }
         
+/* ═══════════ PREMIUM REDESIGN ═══════════ */
+
+/* Right panel — form area */
+.panel-form {
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 56px 52px !important;
+    position: relative;
+}
+
+/* Form heading */
+.panel-form h1 {
+    font-size: 28px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px !important;
+}
+
+.panel-form > p, #loginForm > p, #registerForm > p {
+    font-size: 14px !important;
+    color: #64748b !important;
+    margin-bottom: 28px !important;
+}
+
+/* NexBook logo badge in form */
+.panel-form::before {
+    content: 'NexBook';
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #7c3aed;
+    background: rgba(124,58,237,0.08);
+    border: 1px solid rgba(124,58,237,0.2);
+    border-radius: 50px;
+    padding: 4px 14px;
+    width: fit-content;
+    margin-bottom: 24px;
+}
+
+/* Input fields */
+.input-group input {
+    background: #f8fafc !important;
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    padding: 14px 16px 14px 46px !important;
+    font-size: 14.5px !important;
+    font-weight: 500;
+    transition: all .2s ease;
+    color: #0f172a !important;
+}
+
+.input-group input:focus {
+    border-color: #7c3aed !important;
+    background: #faf5ff !important;
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.1) !important;
+    outline: none;
+}
+
+.input-group label {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #374151 !important;
+    margin-bottom: 6px !important;
+}
+
+/* Submit button */
+.btn-submit {
+    background: linear-gradient(135deg, #7c3aed, #a855f7) !important;
+    border-radius: 12px !important;
+    padding: 15px !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.2px;
+    box-shadow: 0 4px 16px rgba(124,58,237,0.35) !important;
+    transition: all .25s ease !important;
+}
+
+.btn-submit:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 8px 24px rgba(124,58,237,0.45) !important;
+}
+
+/* Left gradient panel — darker/more elegant */
+.panel-brand {
+    background: linear-gradient(145deg, #1e1b4b 0%, #4c1d95 35%, #7c3aed 70%, #8b5cf6 100%) !important;
+}
+
+/* Tabs */
+.tabs {
+    background: #f1f5f9 !important;
+    border-radius: 12px !important;
+    padding: 4px !important;
+    margin-bottom: 28px !important;
+}
+
+.tab {
+    border-radius: 9px !important;
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+    padding: 9px 20px !important;
+}
+
+.tab.active {
+    background: #ffffff !important;
+    color: #7c3aed !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+}
+
+/* Divider */
+.divider {
+    color: #94a3b8 !important;
+    font-size: 12px !important;
+}
+
+/* Forgot password */
+.forgot-link {
+    color: #7c3aed !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+}

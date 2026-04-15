@@ -1,8 +1,9 @@
 ﻿// ============================================================
-// NEXBOOK — Insights Inteligentes & Melhorias UX
+// NEXBOOK — js/insights.js  v2
+// Insights reais do Firestore + Contadores + Painel Lembretes
 // ============================================================
 
-// Contadores Animados
+// ── Contadores Animados ──────────────────────────────────────
 function animateCounter(el, target, prefix, suffix, duration) {
     if (!el) return;
     const startTime = performance.now();
@@ -17,7 +18,6 @@ function animateCounter(el, target, prefix, suffix, duration) {
     }
     requestAnimationFrame(update);
 }
-
 function animateCurrency(el, target, duration) {
     if (!el) return;
     const startTime = performance.now();
@@ -31,7 +31,6 @@ function animateCurrency(el, target, duration) {
     }
     requestAnimationFrame(update);
 }
-
 window.triggerStatAnimations = function() {
     const todayEl = document.getElementById('todayCount');
     const revenueEl = document.getElementById('revenueValue');
@@ -43,6 +42,7 @@ window.triggerStatAnimations = function() {
     if (revenueEl) { const raw = revenueEl.textContent.replace(/[^\d]/g, ''); const v = parseInt(raw) || 0; animateCurrency(revenueEl, v, 900); }
 };
 
+// ── Notification Badge ───────────────────────────────────────
 function updateNotificationBadge(count) {
     const notifEl = document.querySelector('.notification');
     if (!notifEl) return;
@@ -53,109 +53,166 @@ function updateNotificationBadge(count) {
     } else if (badge) { badge.remove(); }
 }
 
-window.generateInsights = async function(data) {
-    const list = document.getElementById('insightsList');
-    const actionsList = document.getElementById('actionsList');
-    if (!list || !actionsList) return;
-    const { todayCount=0, totalClients=0, revenueRaw=0, inactiveClients=0, stoppedAppointments=0, upcomingToday=0 } = data;
-    const insights = [];
-    const actions = [];
-    let notifCount = 0;
+// ── Métricas Reais do Firestore ──────────────────────────────
+window.loadRealInsights = async function() {
+    if (!window.currentUserId) return;
 
-    if (inactiveClients > 0) {
-        insights.push({ type: 'warning', text: '<strong>' + inactiveClients + ' cliente' + (inactiveClients>1?'s':'') + '</strong> sem agendamento ha mais de 30 dias', action: 'Ver clientes', view: 'clients' });
-        actions.push({ icon: 'clipboard', text: 'Entrar em contato com ' + inactiveClients + ' cliente' + (inactiveClients>1?'s inativos':' inativo'), view: 'clients' });
-        if (inactiveClients > 3) notifCount++;
-    }
-    if (stoppedAppointments > 3) {
-        insights.push({ type: 'danger', text: '<strong>' + stoppedAppointments + ' agendamentos</strong> parados ha mais de 7 dias', action: 'Ver calendario', view: 'calendar' });
-        notifCount++;
-    }
-    if (upcomingToday > 0) {
-        insights.push({ type: 'info', text: 'Voce tem <strong>' + upcomingToday + ' agendamento' + (upcomingToday>1?'s':'') + '</strong> para hoje' });
-        actions.push({ icon: 'calendar-alt', text: 'Confirmar ' + upcomingToday + ' agendamento' + (upcomingToday>1?'s':'') + ' de hoje', view: 'calendar' });
-    }
-    if (totalClients > 0 && todayCount === 0) {
-        insights.push({ type: 'warning', text: 'Nenhum agendamento hoje — considere enviar lembretes via <strong>WhatsApp</strong>' });
-        actions.push({ icon: 'comment-dots', text: 'Enviar lembrete WhatsApp', onclick: 'openWhatsAppSelectModal()' });
-        notifCount++;
-    }
-    if (revenueRaw > 0) {
-        insights.push({ type: 'success', text: 'Faturamento do periodo: <strong>R$ ' + revenueRaw.toLocaleString('pt-BR') + '</strong>' });
-    } else if (totalClients > 0) {
-        insights.push({ type: 'tip', text: 'Nenhum faturamento registrado — verifique se os valores dos servicos estao configurados' });
-        actions.push({ icon: 'cog', text: 'Configurar valores dos servicos', view: 'services' });
-    }
-    if (totalClients === 0) {
-        insights.push({ type: 'tip', text: 'Cadastre seu primeiro cliente para comecar a usar o sistema completo' });
-        actions.push({ icon: 'user-plus', text: 'Cadastrar primeiro cliente', onclick: "openModal('client')" });
-    }
-    actions.push({ icon: 'chart-bar', text: 'Gerar relatorio do periodo', view: 'reports' });
-    actions.push({ icon: 'plus-circle', text: 'Criar novo agendamento', onclick: "openModal('appointment')" });
+    const now = new Date();
+    const todayStr = toStr(now);
 
-    const iconMap = { success:'check-circle', warning:'exclamation-triangle', danger:'times-circle', info:'info-circle', tip:'lightbulb' };
-    const colorMap = { success:'var(--success)', warning:'var(--warning)', danger:'var(--danger)', info:'var(--info)', tip:'#f59e0b' };
+    // Datas de referência
+    const weekAgo = new Date(now); weekAgo.setDate(weekAgo.getDate() - 7);
+    const monthAgo = new Date(now); monthAgo.setDate(monthAgo.getDate() - 30);
+    const prevMonthStart = new Date(now); prevMonthStart.setDate(prevMonthStart.getDate() - 60);
 
-    if (insights.length === 0) {
-        list.innerHTML = '<div class="insight-item insight-success"><i class="fas fa-check-circle" style="color:var(--success)"></i><span>Tudo em ordem! Seu negocio esta saudavel.</span></div>';
-    } else {
-        list.innerHTML = insights.map(ins => '<div class="insight-item insight-' + ins.type + '"><div class="insight-left"><i class="fas fa-' + iconMap[ins.type] + '" style="color:' + colorMap[ins.type] + '"></i><span>' + ins.text + '</span></div>' + (ins.action ? '<button class="insight-action-btn" onclick="navigateTo(\'' + ins.view + '\')">' + ins.action + '</button>' : '') + '</div>').join('');
+    try {
+        // Buscar agendamentos dos últimos 60 dias
+        const [aptsSnap, clientsSnap] = await Promise.all([
+            firebase.firestore().collection('appointments')
+                .where('userId', '==', window.currentUserId)
+                .where('date', '>=', toStr(prevMonthStart))
+                .get(),
+            firebase.firestore().collection('clients')
+                .where('userId', '==', window.currentUserId)
+                .get()
+        ]);
+
+        const allApts = aptsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const prevMonthStr = toStr(prevMonthStart);
+        const apts = allApts.filter(a => a.date >= prevMonthStr);
+        const clients = clientsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        // ── Taxa de comparecimento ──────────────────────────
+        const thisMonthApts = apts.filter(a => a.date >= toStr(monthAgo) && a.date <= todayStr);
+        const prevMonthApts = apts.filter(a => a.date >= toStr(prevMonthStart) && a.date < toStr(monthAgo));
+
+        const attendRate = thisMonthApts.length > 0
+            ? Math.round((thisMonthApts.filter(a => a.status === 'attended' || a.status === 'confirmed').length / thisMonthApts.length) * 100)
+            : null;
+        const prevAttendRate = prevMonthApts.length > 0
+            ? Math.round((prevMonthApts.filter(a => a.status === 'attended' || a.status === 'confirmed').length / prevMonthApts.length) * 100)
+            : null;
+        const attendDelta = (attendRate !== null && prevAttendRate !== null) ? attendRate - prevAttendRate : null;
+
+        // ── Clientes não retornaram essa semana ──────────────
+        const activeClients = clients.filter(c => c.status === 'active');
+        const weekAgoStr = toStr(weekAgo);
+        const clientsThisWeek = new Set(apts.filter(a => a.date >= weekAgoStr).map(a => a.clientId || a.clientName));
+        const lostThisWeek = activeClients.filter(c => !clientsThisWeek.has(c.id) && !clientsThisWeek.has(c.name)).length;
+
+        // ── Clientes sem retorno há 15+ dias ─────────────────
+        const fifteenAgo = new Date(now); fifteenAgo.setDate(fifteenAgo.getDate() - 15);
+        const fifteenStr = toStr(fifteenAgo);
+        const recentClientIds = new Set(apts.filter(a => a.date >= fifteenStr).map(a => a.clientId).filter(Boolean));
+        const overdue = activeClients.filter(c => !recentClientIds.has(c.id));
+
+        // ── Horário de pico ──────────────────────────────────
+        const slotCount = {};
+        thisMonthApts.forEach(a => { if (a.time) slotCount[a.time] = (slotCount[a.time] || 0) + 1; });
+        const peakSlot = Object.entries(slotCount).sort((a,b) => b[1]-a[1])[0];
+
+        // ── Serviço mais rentável ─────────────────────────────
+        const serviceRevenue = {};
+        thisMonthApts.forEach(a => {
+            if (a.serviceName && a.servicePrice) {
+                serviceRevenue[a.serviceName] = (serviceRevenue[a.serviceName] || 0) + Number(a.servicePrice);
+            }
+        });
+        const totalRev = Object.values(serviceRevenue).reduce((s,v) => s+v, 0);
+        const topService = Object.entries(serviceRevenue).sort((a,b) => b[1]-a[1])[0];
+
+        // ── Gera insights ────────────────────────────────────
+        const insights = [];
+        let notifCount = 0;
+
+        if (lostThisWeek > 0) {
+            insights.push({ type: 'warning', text: `<strong>${lostThisWeek} cliente${lostThisWeek>1?'s':''}</strong> não voltaram essa semana`, action: 'Ver clientes', view: 'clients' });
+            if (lostThisWeek > 2) notifCount++;
+        }
+        if (attendDelta !== null && attendDelta < -5) {
+            insights.push({ type: 'danger', text: `Taxa de comparecimento <strong>${attendRate}%</strong> (↓ ${Math.abs(attendDelta)}% vs mês anterior)`, action: 'Ver relatórios', view: 'reports' });
+            notifCount++;
+        } else if (attendRate !== null && attendRate > 0) {
+            insights.push({ type: 'success', text: `Taxa de comparecimento este mês: <strong>${attendRate}%</strong>${attendDelta !== null ? ` (${attendDelta >= 0 ? '↑' : '↓'} ${Math.abs(attendDelta)}%)` : ''}` });
+        }
+        if (peakSlot && peakSlot[1] > 1) {
+            insights.push({ type: 'info', text: `Seu horário mais movimentado é às <strong>${peakSlot[0]}</strong> (${peakSlot[1]} agendamentos)` });
+        }
+        if (topService && totalRev > 0) {
+            const pct = Math.round((topService[1]/totalRev)*100);
+            insights.push({ type: 'tip', text: `<strong>"${topService[0]}"</strong> representa <strong>${pct}%</strong> da sua receita do mês` });
+        }
+        if (overdue.length > 0) {
+            insights.push({ type: 'warning', text: `<strong>${overdue.length} cliente${overdue.length>1?'s':''}</strong> sem agendamento há mais de 15 dias`, action: 'Ver clientes', view: 'clients' });
+            if (overdue.length > 3) notifCount++;
+        }
+        if (insights.length === 0) {
+            insights.push({ type: 'success', text: 'Tudo em ordem! Seu negócio está saudável.' });
+        }
+
+        // ── Próximas Ações ───────────────────────────────────
+        const actions = [];
+        if (overdue.length > 0) actions.push({ icon: 'user-clock', text: `Contatar ${overdue.length} cliente${overdue.length>1?'s':''} sem retorno`, view: 'clients' });
+        if (lostThisWeek > 0) actions.push({ icon: 'comments', text: 'Enviar lembrete para clientes da semana', onclick: 'openWhatsAppSelectModal()' });
+        actions.push({ icon: 'chart-bar', text: 'Gerar relatório do período', view: 'reports' });
+        actions.push({ icon: 'plus-circle', text: 'Criar novo agendamento', onclick: "openModal('appointment')" });
+
+        renderInsights(insights);
+        renderActions(actions);
+        updateNotificationBadge(notifCount);
+
+    } catch(e) {
+        console.error('Insights error:', e);
+        renderInsights([{ type: 'info', text: 'Carregue mais dados para ver insights personalizados.' }]);
     }
-    actionsList.innerHTML = actions.map(act => '<div class="action-item" onclick="' + (act.onclick ? act.onclick : "navigateTo('" + act.view + "')") + '"><span class="action-icon-fa"><i class="fas fa-' + act.icon + '"></i></span><span class="action-text">' + act.text + '</span><i class="fas fa-chevron-right action-arrow"></i></div>').join('');
-    updateNotificationBadge(notifCount);
 };
+
+function toStr(d) {
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+const iconMap = { success:'check-circle', warning:'exclamation-triangle', danger:'times-circle', info:'info-circle', tip:'lightbulb' };
+const colorMap = { success:'var(--success)', warning:'var(--warning)', danger:'var(--danger)', info:'var(--info)', tip:'#f59e0b' };
+
+function renderInsights(insights) {
+    const list = document.getElementById('insightsList');
+    if (!list) return;
+    list.innerHTML = insights.map(ins =>
+        `<div class="insight-item insight-${ins.type}">
+            <div class="insight-left">
+                <i class="fas fa-${iconMap[ins.type]}" style="color:${colorMap[ins.type]}"></i>
+                <span>${ins.text}</span>
+            </div>
+            ${ins.action ? `<button class="insight-action-btn" onclick="navigateTo('${ins.view}')">${ins.action}</button>` : ''}
+        </div>`
+    ).join('');
+}
+
+function renderActions(actions) {
+    const list = document.getElementById('actionsList');
+    if (!list) return;
+    list.innerHTML = actions.map(act =>
+        `<div class="action-item" onclick="${act.onclick ? act.onclick : `navigateTo('${act.view}')`}">
+            <span class="action-icon-fa"><i class="fas fa-${act.icon}"></i></span>
+            <span class="action-text">${act.text}</span>
+            <i class="fas fa-chevron-right action-arrow"></i>
+        </div>`
+    ).join('');
+}
 
 function navigateTo(view) {
     const item = document.querySelector('[data-view="' + view + '"]');
     if (item) item.click();
 }
 
+// ── Injeção dos painéis no DOM ───────────────────────────────
+
+
 function updateStatCardColors() {
     document.querySelectorAll('.stat-comparison').forEach(el => {
-        const textContent = el.textContent;
-        el.classList.remove('stat-comp-positive', 'stat-comp-negative');
-        if (textContent.includes('+')) el.classList.add('stat-comp-positive');
-        else if (textContent.includes('-')) el.classList.add('stat-comp-negative');
+        const text = el.textContent;
+        el.classList.remove('stat-comp-positive','stat-comp-negative');
+        if (text.includes('+')) el.classList.add('stat-comp-positive');
+        else if (text.includes('-')) el.classList.add('stat-comp-negative');
     });
 }
-
-document.addEventListener('DOMContentLoaded', function() {
-    const dashView = document.getElementById('dashboardView');
-    if (!dashView) return;
-
-    // Painel de insights
-    const insightsContainer = document.createElement('div');
-    insightsContainer.className = 'insights-row';
-    insightsContainer.innerHTML = `
-        <div id="insightsPanel" class="insights-panel">
-            <div class="insights-header">
-                <div class="insights-title"><i class="fas fa-brain"></i><span>Insights Inteligentes</span></div>
-                <span class="insights-badge">IA</span>
-            </div>
-            <div class="insights-list" id="insightsList">
-                <div class="insight-loading"><i class="fas fa-circle-notch fa-spin"></i> Analisando dados...</div>
-            </div>
-        </div>
-        <div id="nextActionsPanel" class="next-actions-panel">
-            <div class="next-actions-header">
-                <div class="next-actions-title"><i class="fas fa-tasks"></i><span>Proximas Acoes</span></div>
-            </div>
-            <div class="actions-list" id="actionsList">
-                <div class="insight-loading"><i class="fas fa-circle-notch fa-spin"></i> Carregando...</div>
-            </div>
-        </div>
-    `;
-
-    const chartsGrid = dashView.querySelector('.charts-grid');
-    if (chartsGrid) chartsGrid.parentNode.insertBefore(insightsContainer, chartsGrid);
-    else dashView.appendChild(insightsContainer);
-
-    setTimeout(() => {
-        const il = document.getElementById('insightsList');
-        if (il && il.querySelector('.insight-loading')) {
-            generateInsights({ todayCount: 0, totalClients: 0, revenueRaw: 0, inactiveClients: 0 });
-        }
-    }, 6000);
-
-    setTimeout(updateStatCardColors, 3000);
-});

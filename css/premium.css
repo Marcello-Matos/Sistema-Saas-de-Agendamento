@@ -860,3 +860,314 @@ table tbody td:first-child {
 table td, table th {
     vertical-align: middle !important;
 }
+
+/* ============================================================
+   NEXBOOK — Painel Lembretes + Link de Agendamento
+   ============================================================ */
+
+/* ── Reminders Card ── */
+.reminders-card {
+    background: var(--background-card);
+    border-radius: 20px;
+    border: 1px solid rgba(37,211,102,0.18);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-top: 20px;
+    animation: fadeInUp 0.5s ease 0.35s both;
+}
+.reminders-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, rgba(37,211,102,0.06), rgba(18,140,126,0.04));
+    border-bottom: 1px solid rgba(37,211,102,0.12);
+}
+.reminders-title-row {
+    display: flex; align-items: center; gap: 10px;
+}
+.reminders-title-row h3 { font-family: 'Syne',sans-serif; font-size: 15px; font-weight: 700; }
+.reminders-badge {
+    background: #25D366; color: white;
+    font-size: 11px; font-weight: 700;
+    width: 20px; height: 20px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    animation: pulse-notif 2s infinite;
+}
+.btn-refresh-reminders {
+    background: none; border: 1px solid var(--border-color);
+    border-radius: 8px; width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--text-muted); transition: all 0.2s;
+}
+.btn-refresh-reminders:hover {
+    background: #25D366; color: white; border-color: transparent;
+    transform: rotate(180deg);
+}
+.reminders-list { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; }
+.reminders-empty { text-align: center; padding: 24px; color: var(--text-muted); }
+.reminders-empty i { font-size: 28px; display: block; margin-bottom: 8px; opacity: 0.5; }
+.reminders-empty p { font-size: 13px; }
+
+.reminder-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px;
+    background: var(--background-tertiary);
+    border-radius: 12px;
+    transition: all 0.2s;
+    border: 1px solid var(--border-color);
+}
+.reminder-item:hover { border-color: rgba(37,211,102,0.3); box-shadow: 0 2px 10px rgba(37,211,102,0.1); }
+.reminder-time {
+    font-weight: 800; font-size: 15px;
+    color: var(--primary); min-width: 44px;
+    font-family: 'Syne', sans-serif;
+}
+.reminder-info { flex: 1; min-width: 0; }
+.reminder-name { font-weight: 700; font-size: 14px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.reminder-service { font-size: 12px; color: var(--text-muted); }
+.reminder-phone { font-size: 11px; color: #25D366; margin-top: 2px; display: flex; align-items: center; gap: 4px; }
+.reminder-wa-btn {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, #25D366, #128C7E);
+    border: none; color: white; font-size: 16px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; flex-shrink: 0;
+    box-shadow: 0 4px 10px rgba(37,211,102,0.3);
+}
+.reminder-wa-btn:hover { transform: scale(1.15); box-shadow: 0 6px 16px rgba(37,211,102,0.45); }
+
+.reminder-send-all {
+    width: auto; padding: 10px 20px;
+    background: linear-gradient(135deg, #25D366, #128C7E);
+    color: white; border: none; border-radius: 50px;
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    transition: all 0.25s; margin-top: 10px;
+    box-shadow: 0 4px 14px rgba(37,211,102,0.3);
+}
+.reminder-send-all:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(37,211,102,0.45); }
+
+/* ── Booking Link Box ── */
+.booking-link-box {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; padding: 10px 14px;
+    background: var(--background-tertiary);
+    border: 1.5px solid rgba(79,70,229,0.2);
+    border-radius: 12px;
+}
+.btn-copy-link {
+    background: var(--primary); color: white;
+    border: none; border-radius: 8px;
+    width: 32px; height: 32px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s;
+}
+.btn-copy-link:hover { background: var(--primary-dark); transform: scale(1.1); }
+
+/* ═══════════════════════════════════════════════
+   MOBILE FIRST — NexBook App Experience
+   ══════════════════════════════════════════════ */
+
+/* Agendar Online button — desktop only */
+.btn-agendar-online {
+    display: none; /* hidden from header on all sizes, it's in the sidebar now */
+}
+
+/* Bottom nav hidden on desktop by default */
+.bottom-nav { display: none; }
+
+@media (max-width: 768px) {
+    /* Base reset */
+    html { overflow-x: hidden; }
+    body {
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        height: auto !important;
+        min-height: 100vh;
+        flex-direction: column;
+        max-width: 100vw;
+    }
+
+    /* Hide sidebar and old toggle */
+    .sidebar { display: none !important; }
+    .sidebar-toggle { display: none !important; }
+
+    /* Content scrollbar hidden on mobile */
+    .content { scrollbar-width: none !important; }
+    .content::-webkit-scrollbar { display: none !important; width: 0 !important; }
+
+    /* Main takes full width */
+    .main {
+        width: 100vw !important;
+        min-width: 0 !important;
+        overflow-x: hidden;
+    }
+
+    /* HEADER */
+    .header {
+        position: sticky !important;
+        top: 0;
+        z-index: 100;
+        padding: 10px 16px !important;
+        gap: 10px;
+        background: var(--background-secondary) !important;
+        border-bottom: 1px solid var(--border-color);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        flex-wrap: nowrap;
+        min-height: 56px;
+        align-items: center;
+    }
+    .page-title { flex: 1; min-width: 0; }
+    .page-title h1 {
+        font-size: 16px !important;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .page-title p { display: none !important; }
+    .search-box { display: none !important; }
+    .header-actions { gap: 8px !important; flex-shrink: 0; }
+
+    /* CONTENT AREA */
+    .content {
+        padding: 16px 12px 90px 12px !important;
+    }
+
+    /* STAT CARDS */
+    .stats-grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+    }
+    .stat-card {
+        padding: 14px 12px !important;
+        border-radius: 14px !important;
+    }
+    .stat-value { font-size: 22px !important; }
+    .stat-label { font-size: 11px !important; }
+    .stat-icon { width: 36px !important; height: 36px !important; font-size: 16px !important; }
+
+    /* CHARTS */
+    .charts-grid { grid-template-columns: 1fr !important; gap: 14px !important; }
+    .chart-card { border-radius: 14px !important; padding: 16px !important; }
+    canvas { max-height: 220px !important; }
+
+    /* INSIGHTS */
+    .insights-row { grid-template-columns: 1fr !important; gap: 14px !important; }
+
+    /* TABLES */
+    .table-container {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 12px !important;
+    }
+    table { min-width: 500px; }
+    th, td { padding: 10px 12px !important; font-size: 13px !important; }
+
+    /* MODALS */
+    .modal { padding: 12px !important; align-items: flex-end !important; }
+    .modal-content {
+        max-width: 100% !important;
+        width: 100% !important;
+        border-radius: 20px 20px 0 0 !important;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    /* FORMS */
+    .form-grid { grid-template-columns: 1fr !important; }
+
+    /* REMINDERS CARD */
+    .reminders-card { margin: 0 0 14px 0 !important; border-radius: 14px !important; }
+
+    /* BOTTOM NAVIGATION BAR */
+    .bottom-nav {
+        display: flex !important;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 999;
+        background: linear-gradient(180deg, #1e1b4b 0%, #312e81 100%);
+        border-top: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.25);
+        height: 68px;
+        padding: 0;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+    .bottom-nav-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: rgba(255,255,255,0.5);
+        transition: color 0.2s, transform 0.15s;
+        padding: 6px 4px;
+        position: relative;
+    }
+    .bottom-nav-item .bnav-icon {
+        font-size: 20px;
+        transition: transform 0.2s cubic-bezier(.34,1.56,.64,1);
+        line-height: 1;
+    }
+    .bottom-nav-item .bnav-label {
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 0.2px;
+    }
+    .bottom-nav-item.active {
+        color: #fff;
+    }
+    .bottom-nav-item.active .bnav-icon {
+        transform: scale(1.15) translateY(-2px);
+    }
+    .bottom-nav-item.active::after {
+        content: '';
+        position: absolute;
+        top: 4px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 28px;
+        height: 3px;
+        background: linear-gradient(90deg, #818cf8, #c084fc);
+        border-radius: 0 0 4px 4px;
+    }
+    .bottom-nav-item:active { transform: scale(0.92); }
+
+    /* VIEWS SECTIONS */
+    .view-section { padding: 0 !important; }
+    .section-header { padding: 0 0 14px 0 !important; flex-wrap: wrap; gap: 8px; }
+    .section-header h2 { font-size: 18px !important; }
+}
+
+@media (max-width: 480px) {
+    .stats-grid { grid-template-columns: 1fr 1fr !important; }
+    .stat-value { font-size: 20px !important; }
+    .bottom-nav { height: 64px; }
+    .bottom-nav-item .bnav-label { font-size: 9px; }
+    .page-title h1 { font-size: 15px !important; }
+}
+
+/* Agendar Online nav item */
+.nav-item-booking {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+    color: #fff !important;
+    border-radius: 10px;
+    margin-top: 4px;
+    font-weight: 600;
+}
+.nav-item-booking:hover {
+    background: linear-gradient(135deg, #059669, #047857) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16,185,129,0.35);
+}
+.nav-item-booking i, .nav-item-booking span { color: #fff !important; }
+/* Hide sidebar scrollbar completely */
+.sidebar { overflow: hidden !important; scrollbar-width: none !important; }
+.sidebar::-webkit-scrollbar { display: none !important; width: 0 !important; }
+.nav-menu { overflow: hidden !important; scrollbar-width: none !important; }
+.nav-menu::-webkit-scrollbar { display: none !important; width: 0 !important; }

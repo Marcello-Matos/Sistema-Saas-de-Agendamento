@@ -37,7 +37,8 @@
     <!-- Color Picker -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr@latest/dist/themes/classic.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr@latest/dist/pickr.min.js"></script>
-        <!-- CSS Premium Design -->
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- CSS Premium Design -->
     <link rel="stylesheet" href="css/premium.css">
     <!-- CSS Premium - Insights & UX Enhancements -->
     <style>
@@ -247,8 +248,8 @@
                 <div class="theme-toggle" onclick="toggleTheme()">
                     <i class="fas fa-moon" id="themeIcon"></i>
                 </div>
-                
-                <div class="user" onclick="toggleUserDropdown()">
+
+<div class="user" onclick="toggleUserDropdown()">
                     <div class="user-info">
                         <div class="user-name" id="userNameDisplay">Admin</div>
                         <div class="user-plan" id="userPlanDisplay">Premium</div>
@@ -256,18 +257,7 @@
                     <div class="user-avatar" id="userAvatar">AD</div>
                 </div>
                 
-                <div class="user-dropdown" id="userDropdown">
-                    <div class="dropdown-item" onclick="viewProfile()">
-                        <i class="fas fa-user"></i> <span data-i18n="myProfile">Meu Perfil</span>
-                    </div>
-                    <div class="dropdown-item" onclick="viewSettings()">
-                        <i class="fas fa-cog"></i> <span data-i18n="settings">Configurações</span>
-                    </div>
-                    <div class="dropdown-divider"></div>
-                    <div class="dropdown-item" onclick="logout()">
-                        <i class="fas fa-sign-out-alt"></i> <span data-i18n="logout">Sair</span>
-                    </div>
-                </div>
+                
             </div>
         </div>
 
@@ -382,6 +372,23 @@
                     <div class="appointments-list" id="appointmentsList">
                         <div class="loading-state" data-i18n="loadingAppointments">Carregando agendamentos...</div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Lembretes de Amanhã -->
+            <div class="reminders-card" id="remindersCard">
+                <div class="reminders-header">
+                    <div class="reminders-title-row">
+                        <i class="fab fa-whatsapp" style="color:#25D366;font-size:18px"></i>
+                        <h3>Lembretes de Amanhã</h3>
+                        <span class="reminders-badge" id="remindersBadge" style="display:none">0</span>
+                    </div>
+                    <button class="btn-refresh-reminders" onclick="loadTomorrowReminders()" title="Atualizar">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                <div class="reminders-list" id="remindersList">
+                    <div class="reminders-empty"><i class="fas fa-circle-notch fa-spin"></i><p>Carregando...</p></div>
                 </div>
             </div>
             
@@ -771,6 +778,8 @@
         </div>
     </div>
 
+    
+
     <!-- MODAL GERAL -->
     <div class="modal" id="genericModal">
         <div class="modal-content">
@@ -922,6 +931,7 @@
     </div>
     <script src="js/script.js"></script>
     <script src="js/insights.js"></script>
+    <script src="js/whatsapp-history.js"></script>
     <script src="js/whatsapp.js"></script>
     <script src="js/idioma.js"></script>
 
@@ -968,6 +978,108 @@
         setTimeout(staggerStatCards, 300);
     });
     </script>
+    <!-- Booking Link + QR Code JS -->
+    <script>
+    function getBookingLink() {
+        return 'https://nexbook-14d69.web.app/booking.html?uid=' + (window.currentUserId || '');
+    }
+    function updateBookingLink() {
+        var el = document.getElementById('bookingLinkText');
+        if (el && window.currentUserId) el.textContent = getBookingLink();
+    }
+    function copyBookingLink() {
+        var link = getBookingLink();
+        if (navigator.clipboard) navigator.clipboard.writeText(link).then(function() {
+            if (typeof showNotification === 'function') showNotification('Link copiado!', 'success');
+        });
+    }
+    function openBookingLink() {
+        var uid = window.currentUserId;
+        if (uid) {
+            window.open('https://nexbook-14d69.web.app/booking.html?uid=' + uid, '_blank');
+        } else {
+            // Tenta pegar direto do Firebase Auth
+            firebase.auth().currentUser ? (function(u){ window.open('https://nexbook-14d69.web.app/booking.html?uid=' + u.uid, '_blank'); })(firebase.auth().currentUser) : alert('Aguarde o carregamento da conta e tente novamente.');
+        }
+    }
+    function showQRCode() {
+        var container = document.getElementById('qrCodeContainer');
+        var qrDiv = document.getElementById('qrcode');
+        if (!container) return;
+        if (container.style.display === 'none') {
+            container.style.display = 'block';
+            qrDiv.innerHTML = '';
+            new QRCode(qrDiv, { text: getBookingLink(), width: 180, height: 180, colorDark: '#4f46e5', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H });
+        } else { container.style.display = 'none'; }
+    }
+    setInterval(function() { if (window.currentUserId) updateBookingLink(); }, 2000);
+    </script>
+
+    <!-- ══ BOTTOM NAVIGATION BAR (Mobile) ══ -->
+    <nav class="bottom-nav" id="bottomNav" aria-label="Navegação principal">
+        <button class="bottom-nav-item active" data-view="dashboard" onclick="switchMobileTab(this)">
+            <span class="bnav-icon">🏠</span>
+            <span class="bnav-label">Dashboard</span>
+        </button>
+        <button class="bottom-nav-item" data-view="calendar" onclick="switchMobileTab(this)">
+            <span class="bnav-icon">📅</span>
+            <span class="bnav-label">Agenda</span>
+        </button>
+        <button class="bottom-nav-item" data-view="clients" onclick="switchMobileTab(this)">
+            <span class="bnav-icon">👥</span>
+            <span class="bnav-label">Clientes</span>
+        </button>
+        <button class="bottom-nav-item" data-view="reports" onclick="switchMobileTab(this)">
+            <span class="bnav-icon">📊</span>
+            <span class="bnav-label">Relatórios</span>
+        </button>
+        <button class="bottom-nav-item" data-view="settings" onclick="switchMobileTab(this)">
+            <span class="bnav-icon">⚙️</span>
+            <span class="bnav-label">Config</span>
+        </button>
+    </nav>
+
+    <!-- ══ MOBILE NAVIGATION JS ══ -->
+    <script>
+    function switchMobileTab(btn) {
+        var view = btn.getAttribute('data-view');
+        if (!view) return;
+
+        // Update bottom nav active state
+        document.querySelectorAll('.bottom-nav-item').forEach(function(el) {
+            el.classList.remove('active');
+        });
+        btn.classList.add('active');
+
+        // Mirror: trigger the sidebar nav-item click logic
+        // Find the matching sidebar nav-item and simulate its behaviour
+        var sidebarItem = document.querySelector('.nav-item[data-view="' + view + '"]');
+        if (sidebarItem) {
+            sidebarItem.click();
+        } else if (typeof showView === 'function') {
+            showView(view);
+        }
+    }
+
+    // Keep bottom-nav in sync when sidebar items are clicked (desktop fallback)
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.nav-item[data-view]').forEach(function(item) {
+            item.addEventListener('click', function() {
+                var view = this.getAttribute('data-view');
+                document.querySelectorAll('.bottom-nav-item').forEach(function(el) {
+                    el.classList.toggle('active', el.getAttribute('data-view') === view);
+                });
+            });
+        });
+    });
+    </script><div class="user-dropdown" id="userDropdown" style="position:fixed;z-index:999999;display:none">
+    <div class="dropdown-item" onclick="viewProfile()"><i class="fas fa-user"></i> Meu Perfil</div>
+    <div class="dropdown-item" onclick="viewSettings()"><i class="fas fa-cog"></i> Configurações</div>
+    <div class="dropdown-divider"></div>
+    <div class="dropdown-item" onclick="logout()" style="color:#ef4444"><i class="fas fa-sign-out-alt"></i> Sair</div>
+</div>
 </body>
 </html>
+
+
 
