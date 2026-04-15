@@ -253,7 +253,7 @@ const translations = {
         'enterDescription': 'Digite a descrição',
         
         // Títulos de página
-        'pageDashboard': 'Dashboard - NEXBOOK',
+        'pageDashboard': 'NEXBOOK',
         'pageCalendar': 'Calendário - NEXBOOK',
         'pageProfessionals': 'Profissionais - NEXBOOK',
         'pageServices': 'Serviços - NEXBOOK',

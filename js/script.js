@@ -1,4 +1,4 @@
-// ============================================
+﻿// ============================================
 // 🔥 VERIFICAÇÃO DE DUPLICAÇÃO
 // ============================================
 if (window.firebaseInitialized) {
@@ -1596,6 +1596,13 @@ function updateDashboardUI(data) {
     }
     
     updateAppointmentsList(data.appointments);
+    // Insights Inteligentes
+    if (typeof generateInsights === 'function') {
+        const _today = new Date().toISOString().split('T')[0];
+        const _upcoming = (data.appointments || []).filter(a => a.date === _today).length;
+        generateInsights({ todayCount: data.todayAppointments || 0, totalClients: data.activeClients || 0, revenueRaw: data.monthlyRevenue || 0, upcomingToday: _upcoming, inactiveClients: 0, stoppedAppointments: 0 });
+        if (typeof triggerStatAnimations === 'function') setTimeout(triggerStatAnimations, 200);
+    }
 }
 
 // ============================================
@@ -1839,8 +1846,8 @@ function updateClientsTable(clients) {
                 <td data-label="CPF">${maskedCpf}</td>
                 <td data-label="Email">${safeEmail}</td>
                 <td data-label="Telefone">${safePhone}</td>
-                <td data-label="Plano">${safePlan}</td>
-                <td data-label="Origem"><span class="badge" style="background: ${safeOrigin === 'Total Pass' ? colors.totalpass : (safeOrigin === 'Well Hub' ? colors.wellhub : '#6b7280')};">${safeOrigin}</span></td>
+                <td data-label="Plano"><span class="plan-badge plan-${(safePlan||'').toLowerCase()}">${safePlan}</span></td>
+                <td data-label="Origem"><span class="origin-badge origin-${safeOrigin === 'Total Pass' ? 'totalpass' : (safeOrigin === 'Well Hub' ? 'wellhub' : 'direto')}">${safeOrigin}</span></td>
                 <td data-label="Valor">${valorPlano}</td>
                 <td data-label="Data Início"><span class="start-date-badge"><i class="fas fa-calendar-alt"></i> ${dataInicioFormatada}</span></td>
                 <td data-label="Cidade">${safeCity}</td>
@@ -4382,8 +4389,8 @@ async function updateReportClientsList(clients, appointments) {
             return `
                 <tr>
                     <td data-label="Nome">${safeName}</td>
-                    <td data-label="Plano">${safePlan}</td>
-                    <td data-label="Origem"><span class="badge" style="background: ${safeOrigin === 'Total Pass' ? colors.totalpass : (safeOrigin === 'Well Hub' ? colors.wellhub : '#6b7280')};">${safeOrigin}</span></td>
+                    <td data-label="Plano"><span class="plan-badge plan-${(safePlan||'').toLowerCase()}">${safePlan}</span></td>
+                    <td data-label="Origem"><span class="origin-badge origin-${safeOrigin === 'Total Pass' ? 'totalpass' : (safeOrigin === 'Well Hub' ? 'wellhub' : 'direto')}">${safeOrigin}</span></td>
                     <td data-label="Data Início"><span class="start-date-badge"><i class="fas fa-calendar-alt"></i> ${dataInicioFormatada}</span></td>
                     <td data-label="Agendamentos">${total}</td>
                     <td data-label="Comparecimentos">${attended}</td>
@@ -5238,3 +5245,6 @@ window.downloadClientReportPDF = downloadClientReportPDF;
 window.generateGeneralReport = generateGeneralReport;
 window.filterReportClients = filterReportClients;
 window.closeAppointmentDetails = closeAppointmentDetails;
+
+
+
