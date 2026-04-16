@@ -1,4 +1,4 @@
-﻿* {
+* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -2413,4 +2413,20 @@ body.dark-theme .form-group input[type="date"]::-webkit-calendar-picker-indicato
 
 .content::-webkit-scrollbar-thumb:hover {
     background: var(--primary-dark);
+}
+/* ========== USERS VIEW (admin panel) ========== */
+#usersView.active {
+    display: block !important;
+    position: fixed;
+    top: 0;
+    left: 260px;
+    right: 0;
+    bottom: 0;
+    overflow-y: auto;
+    background: var(--background);
+    padding: clamp(16px, 3vw, 32px);
+    z-index: 50;
+}
+@media (max-width: 768px) {
+    #usersView.active { left: 0; top: 60px; }
 }

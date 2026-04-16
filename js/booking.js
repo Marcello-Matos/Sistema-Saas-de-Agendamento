@@ -301,6 +301,7 @@ async function submitBooking() {
     btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Salvando...';
 
     try {
+        const clientEmail = (document.getElementById('clientEmail')?.value || '').trim() || null;
         const docRef = await db.collection('appointments').add({
             userId: state.uid,
             clientName: name,
@@ -314,6 +315,7 @@ async function submitBooking() {
             date: state.selectedDate,
             time: state.selectedSlot,
             status: 'pending',
+            clientEmail: clientEmail,
             source: 'online_booking',
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });

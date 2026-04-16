@@ -17,6 +17,35 @@
 
     try {
         firebase.initializeApp(firebaseConfig);
+// ── Controle de Acesso / Paywall ──────────────────────────
+const ADMIN_UIDS = ["Nrq4TYVDGsfboHOPDx7csCF0QSi2","O525l43Yzxatu5ckI7k8J1VLfjU2","SpygmGopNAXhban8lTi8JaBvAoG2","pZQbVSQkaid4lYSTDcNarjZTUHl1","tx3jN29YGcUzDu2kLGlErI86CgW2"];
+
+async function checkSubscriptionAndRedirect(user) {
+    if (!user) { window.location.href = 'index.html'; return; }
+    if (ADMIN_UIDS.includes(user.uid)) { window.location.href = 'dashboard.html'; return; }
+    try {
+        const db = firebase.firestore();
+        // Verificar se eh funcionario criado pelo admin (tem createdBy)
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        if (userDoc.exists && userDoc.data().createdBy) {
+            // Funcionario criado pelo admin - nao precisa pagar
+            window.location.href = 'dashboard.html'; return;
+        }
+        const doc = await db.collection('subscriptions').doc(user.uid).get();
+        if (doc.exists) {
+            const sub = doc.data();
+            const now = new Date();
+            const exp = sub.expiresAt && sub.expiresAt.toDate ? sub.expiresAt.toDate() : new Date(0);
+            if (sub.status === 'active' && exp > now) {
+                window.location.href = 'dashboard.html'; return;
+            }
+        }
+        window.location.href = 'pagamento.html?uid=' + user.uid + '&email=' + encodeURIComponent(user.email || '');
+    } catch(e) {
+        console.error('checkSubscription error:', e);
+        window.location.href = 'dashboard.html';
+    }
+}
         auth = firebase.auth();
         db   = firebase.firestore();
         firebaseReady = true;
@@ -29,13 +58,13 @@
 
         // Auth state observer
         // FIX #1: Adicionado guard para evitar loop de redirect no dashboard
-        auth.onAuthStateChanged(user => {
+        auth.onAuthStateChanged(async (user) => {
             if (user && !window.location.pathname.includes('dashboard')) {
                 console.log('✅ Usuário autenticado:', user.displayName || user.email);
                 showToast('success', 'Autenticado!', `Bem-vindo, ${user.displayName || user.email}`);
-                setTimeout(() => {
-                    window.location.href = 'dashboard.html';
-                }, 1200);
+                checkSubscriptionAndRedirect(user);
+
+
             }
         });
 
@@ -216,7 +245,9 @@
        ══════════════════════════════════════════ */
     function demoLogin(displayName) {
         showToast('success', 'Modo demonstração', `Bem-vindo, ${displayName || 'Usuário'}!`);
-        setTimeout(() => { window.location.href = 'dashboard.html'; }, 1400);
+        setTimeout(async () => {
+            await checkSubscriptionAndRedirect(user);
+        }, 1400);
     }
 
     /* ══════════════════════════════════════════

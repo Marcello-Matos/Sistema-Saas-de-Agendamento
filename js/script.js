@@ -1,4 +1,4 @@
-﻿// ============================================
+// ============================================
 // 🔥 VERIFICAÇÃO DE DUPLICAÇÃO
 // ============================================
 if (window.firebaseInitialized) {
@@ -571,6 +571,9 @@ async function verifyAccess() {
             await db.collection('users').doc(firebaseUser.uid).update({
                 lastLogin: firebase.firestore.FieldValue.serverTimestamp()
             });
+            
+            // Se foi criado pelo admin (tem createdBy), eh funcionario e nao precisa pagar
+            window.isEmployee = !!userData.createdBy;
         }
         
         secureDB.getCsrfToken();
@@ -4098,14 +4101,16 @@ document.querySelectorAll('.nav-item').forEach(item => {
             services: 'Gerenciar Serviços',
             clients: 'Gerenciar Clientes',
             reports: 'Relatórios e Análises',
-            settings: 'Configurações do Sistema'
+            settings: 'Configurações do Sistema',
+            users: 'Usuários'
         };
         
-        document.querySelector('.page-title h1').textContent = titles[this.dataset.view];
+        document.querySelector('.page-title h1').textContent = titles[this.dataset.view] || this.dataset.view;
         
         if (this.dataset.view === 'reports') {
             loadReportsData();
         }
+        if (this.dataset.view === 'users') { if (typeof loadUsersView === 'function') loadUsersView(); }
         
         if (globalSearchTerm) {
             setTimeout(() => {
@@ -4130,6 +4135,51 @@ document.querySelectorAll('.nav-item').forEach(item => {
 // ============================================
 // FUNÇÕES DE RELATÓRIOS
 // ============================================
+
+// ── Exportar Relatorios para Excel ─────────────────────────
+function exportReportsToExcel() {
+    if (typeof XLSX === 'undefined') {
+        showNotification('Biblioteca Excel não carregada. Aguarde e tente novamente.', 'error');
+        return;
+    }
+    try {
+        const wb = XLSX.utils.book_new();
+
+        // Aba 1: Agendamentos do periodo
+        const reportsTable = document.getElementById('reportsTableBody') || document.querySelector('#reportsView table tbody');
+        if (reportsTable) {
+            const rows = [['Data', 'Cliente', 'Serviço', 'Profissional', 'Status', 'Valor (R$)']];
+            reportsTable.querySelectorAll('tr').forEach(tr => {
+                const cells = tr.querySelectorAll('td');
+                if (cells.length > 0) {
+                    rows.push(Array.from(cells).map(td => td.textContent.trim()));
+                }
+            });
+            const ws1 = XLSX.utils.aoa_to_sheet(rows);
+            ws1['!cols'] = rows[0].map(() => ({ wch: 20 }));
+            XLSX.utils.book_append_sheet(wb, ws1, 'Agendamentos');
+        }
+
+        // Aba 2: KPIs resumo
+        const kpiData = [
+            ['Métrica', 'Valor'],
+            ['Total de Clientes', document.getElementById('reportTotalClients')?.textContent || '—'],
+            ['Total de Agendamentos', document.getElementById('reportTotalAppointments')?.textContent || '—'],
+            ['Taxa de Comparecimento', document.getElementById('reportAttendanceRate')?.textContent || '—'],
+            ['Receita no Período', document.getElementById('reportTotalRevenue')?.textContent || '—'],
+        ];
+        const ws2 = XLSX.utils.aoa_to_sheet(kpiData);
+        ws2['!cols'] = [{ wch: 28 }, { wch: 20 }];
+        XLSX.utils.book_append_sheet(wb, ws2, 'Resumo');
+
+        // Gerar e baixar
+        const date = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+        XLSX.writeFile(wb, 'relatorio-nexbook-' + date + '.xlsx');
+        if (typeof showNotification === 'function') showNotification('Excel exportado com sucesso!', 'success');
+    } catch(e) {
+        if (typeof showNotification === 'function') showNotification('Erro ao exportar: ' + e.message, 'error');
+    }
+}
 async function loadReportsData() {
     if (!currentUserId) return;
     
@@ -4836,6 +4886,27 @@ auth.onAuthStateChanged(async user => {
             if (sidebarElement) sidebarElement.style.display = 'flex';
             
             updateUserInterface(user);
+            // Controle de permissoes: verificar role e dados sensiveis
+            const MASTER_UIDS = ['Nrq4TYVDGsfboHOPDx7csCF0QSi2','O525l43Yzxatu5ckI7k8J1VLfjU2','SpygmGopNAXhban8lTi8JaBvAoG2','pZQbVSQkaid4lYSTDcNarjZTUHl1','tx3jN29YGcUzDu2kLGlErI86CgW2'];
+            const isMasterUid = MASTER_UIDS.includes(user.uid);
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                const userData = userDoc.exists ? userDoc.data() : {};
+                const firestoreRole = userData.role || (isMasterUid ? 'admin' : 'funcionario');
+                window.userRole = firestoreRole;
+                window.canViewSensitiveData = isMasterUid || (userData.canViewSensitiveData === true) || firestoreRole === 'admin';
+            } catch(e) {
+                window.canViewSensitiveData = isMasterUid;
+                window.userRole = isMasterUid ? 'admin' : 'funcionario';
+            }
+            // Mostrar/ocultar elementos de admin (botao Usuarios, etc)
+            document.querySelectorAll('[data-permission="admin"]').forEach(function(el) {
+                el.style.display = (isMasterUid || window.userRole === 'admin') ? '' : 'none';
+            });
+            if (!window.canViewSensitiveData) {
+                document.querySelectorAll('[data-permission="financeiro"]').forEach(el => el.style.display = "none");
+            }
+
             
             startSessionMonitor();
             
