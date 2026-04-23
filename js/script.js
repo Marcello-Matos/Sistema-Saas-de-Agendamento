@@ -1,4 +1,4 @@
-// ============================================
+﻿// ============================================
 // 🔥 VERIFICAÇÃO DE DUPLICAÇÃO
 // ============================================
 if (window.firebaseInitialized) {
@@ -4100,6 +4100,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
             professionals: 'Gerenciar Profissionais',
             services: 'Gerenciar Serviços',
             clients: 'Gerenciar Clientes',
+            whatsapp: 'Configurações do WhatsApp',
             reports: 'Relatórios e Análises',
             settings: 'Configurações do Sistema',
             users: 'Usuários'
@@ -4109,6 +4110,9 @@ document.querySelectorAll('.nav-item').forEach(item => {
         
         if (this.dataset.view === 'reports') {
             loadReportsData();
+        }
+        if (this.dataset.view === 'whatsapp') {
+            loadWhatsAppSettings();
         }
         if (this.dataset.view === 'users') { if (typeof loadUsersView === 'function') loadUsersView(); }
         
@@ -5325,5 +5329,236 @@ window.generateGeneralReport = generateGeneralReport;
 window.filterReportClients = filterReportClients;
 window.closeAppointmentDetails = closeAppointmentDetails;
 
+async function searchClientsForAppointment() {
+    const searchInput = document.getElementById('modalClientSearch');
+    const clientSelect = document.getElementById('modalClientId');
+    
+    if (!searchInput || !clientSelect) return;
+    
+    const searchTerm = searchInput.value.trim().toLowerCase();
+    
+    if (searchTerm.length === 0) {
+        loadModalSelects();
+        return;
+    }
+    
+    if (searchTerm.length < 2) return;
+    
+    try {
+        const clientsSnap = await db.collection('clients')
+            .where('userId', '==', currentUserId)
+            .get();
+        
+        clientSelect.innerHTML = '<option value="">Selecione um cliente</option>';
+        
+        let foundClients = [];
+        
+        clientsSnap.forEach(doc => {
+            const data = doc.data();
+            const clientName = (data.name || '').toLowerCase();
+            const clientCpf = (data.cpf || '').replace(/\D/g, '');
+            const searchTermClean = searchTerm.replace(/\D/g, '');
+            
+            const matchName = clientName.includes(searchTerm);
+            const matchCpf = searchTermClean.length > 0 && clientCpf.includes(searchTermClean);
+            
+            if (matchName || matchCpf) {
+                foundClients.push({
+                    id: doc.id,
+                    name: data.name || 'Sem nome',
+                    cpf: data.cpf || ''
+                });
+            }
+        });
+        
+        foundClients.sort((a, b) => a.name.localeCompare(b.name));
+        
+        if (foundClients.length === 0) {
+            clientSelect.innerHTML += '<option value="" disabled>Nenhum cliente encontrado</option>';
+        } else {
+            foundClients.forEach(client => {
+                const displayText = client.cpf 
+                    ? `${client.name} (CPF: ${client.cpf})` 
+                    : client.name;
+                clientSelect.innerHTML += `<option value="${client.id}">${displayText}</option>`;
+            });
+        }
+        
+    } catch (error) {
+        console.error('Erro ao buscar clientes:', error);
+    }
+}
 
+// ============================================
+// FUNÇÃO DE BUSCA DE CLIENTES
+// ============================================
+let allClientsData = [];
+
+function searchClients() {
+    const searchInput = document.getElementById('clientSearchInput');
+    if (!searchInput) return;
+    
+    const searchTerm = searchInput.value.trim().toLowerCase();
+    
+    // Se vazio, recarrega todos
+    if (searchTerm.length === 0) {
+        loadClients();
+        return;
+    }
+    
+    // Filtra na tabela atual
+    const rows = document.querySelectorAll('#clientsList tr');
+    rows.forEach(row => {
+        const nameCell = row.cells[1]; // Coluna do nome
+        const cpfCell = row.cells[3];  // Coluna do CPF
+        
+        if (nameCell && cpfCell) {
+            const name = nameCell.textContent.toLowerCase();
+            const cpf = cpfCell.textContent.replace(/\D/g, '');
+            const searchClean = searchTerm.replace(/\D/g, '');
+            
+            const matchName = name.includes(searchTerm);
+            const matchCpf = searchClean.length > 0 && cpf.includes(searchClean);
+            
+            row.style.display = (matchName || matchCpf) ? '' : 'none';
+        }
+    });
+}
+
+
+
+// ============================================
+// CONFIGURAÇÕES WHATSAPP
+// ============================================
+async function loadWhatsAppSettings() {
+    try {
+        if (!currentUserId) return;
+        const doc = await db.collection('settings').doc(currentUserId).get();
+        const data = doc.exists ? doc.data() : {};
+        const numberEl = document.getElementById('whatsappBusinessNumber');
+        const linkEl = document.getElementById('whatsappBusinessLink');
+        if (numberEl) numberEl.value = data.whatsappBusinessNumber || data.companyPhone || '';
+        if (linkEl) linkEl.value = data.whatsappBusinessLink || '';
+    } catch (error) {
+        console.error('Erro ao carregar WhatsApp:', error);
+        showNotification('Erro ao carregar configurações do WhatsApp', 'error');
+    }
+}
+
+async function saveWhatsAppSettings() {
+    try {
+        if (!currentUserId) {
+            showNotification('Usuário não autenticado', 'error');
+            return;
+        }
+        const numberEl = document.getElementById('whatsappBusinessNumber');
+        const linkEl = document.getElementById('whatsappBusinessLink');
+        const rawNumber = (numberEl?.value || '').trim();
+        const cleanNumber = rawNumber.replace(/\D/g, '');
+        let link = (linkEl?.value || '').trim();
+        if (!link && cleanNumber) {
+            link = `https://wa.me/${cleanNumber.startsWith('55') ? cleanNumber : '55' + cleanNumber}`;
+        }
+        await db.collection('settings').doc(currentUserId).set({
+            whatsappBusinessNumber: cleanNumber,
+            whatsappBusinessLink: link,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        localStorage.setItem('whatsappBusinessNumber', cleanNumber);
+        localStorage.setItem('whatsappBusinessLink', link);
+        showNotification('WhatsApp salvo com sucesso!', 'success');
+    } catch (error) {
+        console.error('Erro ao salvar WhatsApp:', error);
+        showNotification('Erro ao salvar WhatsApp', 'error');
+    }
+}
+
+function openConfiguredWhatsAppLink() {
+    const numberEl = document.getElementById('whatsappBusinessNumber');
+    const linkEl = document.getElementById('whatsappBusinessLink');
+    const rawNumber = (numberEl?.value || localStorage.getItem('whatsappBusinessNumber') || '').trim();
+    const savedLink = (linkEl?.value || localStorage.getItem('whatsappBusinessLink') || '').trim();
+    const cleanNumber = rawNumber.replace(/\D/g, '');
+    const finalLink = savedLink || (cleanNumber ? `https://wa.me/${cleanNumber.startsWith('55') ? cleanNumber : '55' + cleanNumber}` : '');
+    if (!finalLink) {
+        showNotification('Cadastre um número ou link do WhatsApp primeiro', 'error');
+        return;
+    }
+    window.open(finalLink, '_blank');
+}
+
+
+
+
+
+function openWhatsAppWebLogin() {
+    window.open('https://web.whatsapp.com/', '_blank');
+    showNotification('Abra o WhatsApp Web e faça login com o número do cliente neste navegador.', 'success');
+}
+
+window.openWhatsAppWebLogin = openWhatsAppWebLogin;
+
+
+// Remove tooltips de eventos ao sair do calendário, rolar ou clicar fora
+(function attachEventTooltipCleanup() {
+    document.addEventListener('mouseover', function(e) {
+        const overEvent = e.target.closest('.fc-event');
+        const overTooltip = e.target.closest('.event-tooltip');
+        if (!overEvent && !overTooltip) {
+            document.querySelectorAll('.event-tooltip').forEach(t => t.remove());
+        }
+    });
+    document.addEventListener('scroll', function() {
+        document.querySelectorAll('.event-tooltip').forEach(t => t.remove());
+    }, true);
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.fc-event') && !e.target.closest('.event-tooltip')) {
+            document.querySelectorAll('.event-tooltip').forEach(t => t.remove());
+        }
+    });
+})();
+
+async function loadTrialBanner() {
+    try {
+        const firebaseUser = auth.currentUser;
+        const banner = document.getElementById('trialNoticeBanner');
+        const text = document.getElementById('trialNoticeText');
+        const planDisplay = document.getElementById('userPlanDisplay');
+        if (!firebaseUser || !banner || !text) return;
+
+        const subDoc = await db.collection('subscriptions').doc(firebaseUser.uid).get();
+        if (!subDoc.exists) {
+            banner.style.display = 'none';
+            return;
+        }
+
+        const sub = subDoc.data() || {};
+        if ((sub.plan || '').toLowerCase() !== 'trial' || sub.status !== 'active' || !sub.expiresAt) {
+            banner.style.display = 'none';
+            if (planDisplay && sub.plan) planDisplay.textContent = String(sub.plan).charAt(0).toUpperCase() + String(sub.plan).slice(1);
+            return;
+        }
+
+        const expiresAt = sub.expiresAt.toDate ? sub.expiresAt.toDate() : new Date(sub.expiresAt);
+        const now = new Date();
+        const diffMs = expiresAt.getTime() - now.getTime();
+        const daysLeft = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+
+        if (daysLeft <= 0) {
+            banner.style.display = 'none';
+            return;
+        }
+
+        banner.style.display = 'block';
+        text.textContent = daysLeft === 1
+            ? 'Seu período grátis termina em 1 dia.'
+            : `Seu período grátis termina em ${daysLeft} dias.`;
+
+        if (planDisplay) {
+            planDisplay.textContent = `Trial • ${daysLeft} dia${daysLeft === 1 ? '' : 's'}`;
+        }
+    } catch (error) {
+        console.error('Erro ao carregar aviso do trial:', error);
+    }
+}
 

@@ -1,6 +1,6 @@
-/* ══════════════════════════════════════════
+﻿/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        FIREBASE CONFIGURATION
-       ══════════════════════════════════════════ */
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
    
     const firebaseConfig = {
         apiKey: "AIzaSyCCvnw5eBBjUAa0piQ7Njy2t_W4TVZSIwk",
@@ -17,7 +17,7 @@
 
     try {
         firebase.initializeApp(firebaseConfig);
-// ── Controle de Acesso / Paywall ──────────────────────────
+// â”€â”€ Controle de Acesso / Paywall â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ADMIN_UIDS = ["Nrq4TYVDGsfboHOPDx7csCF0QSi2","O525l43Yzxatu5ckI7k8J1VLfjU2","SpygmGopNAXhban8lTi8JaBvAoG2","pZQbVSQkaid4lYSTDcNarjZTUHl1","tx3jN29YGcUzDu2kLGlErI86CgW2"];
 
 async function checkSubscriptionAndRedirect(user) {
@@ -28,9 +28,17 @@ async function checkSubscriptionAndRedirect(user) {
         // Verificar se eh funcionario criado pelo admin (tem createdBy)
         const userDoc = await db.collection('users').doc(user.uid).get();
         if (userDoc.exists && userDoc.data().createdBy) {
-            // Funcionario criado pelo admin - nao precisa pagar
             window.location.href = 'dashboard.html'; return;
         }
+
+        // Garantir trial automatico no primeiro acesso
+        try {
+            const fn = firebase.app().functions('southamerica-east1');
+            await fn.httpsCallable('ensureTrialAccess')({});
+        } catch (trialError) {
+            console.warn('ensureTrialAccess error:', trialError);
+        }
+
         const doc = await db.collection('subscriptions').doc(user.uid).get();
         if (doc.exists) {
             const sub = doc.data();
@@ -49,7 +57,7 @@ async function checkSubscriptionAndRedirect(user) {
         auth = firebase.auth();
         db   = firebase.firestore();
         firebaseReady = true;
-        console.log('🔥 Firebase Auth inicializado');
+        console.log('ðŸ”¥ Firebase Auth inicializado');
 
         // Persistence: remember me
         auth.setPersistence(
@@ -60,7 +68,7 @@ async function checkSubscriptionAndRedirect(user) {
         // FIX #1: Adicionado guard para evitar loop de redirect no dashboard
         auth.onAuthStateChanged(async (user) => {
             if (user && !window.location.pathname.includes('dashboard')) {
-                console.log('✅ Usuário autenticado:', user.displayName || user.email);
+                console.log('âœ… UsuÃ¡rio autenticado:', user.displayName || user.email);
                 showToast('success', 'Autenticado!', `Bem-vindo, ${user.displayName || user.email}`);
                 checkSubscriptionAndRedirect(user);
 
@@ -69,13 +77,13 @@ async function checkSubscriptionAndRedirect(user) {
         });
 
     } catch (e) {
-        console.warn('⚠️  Firebase não configurado — modo demonstração ativo.');
+        console.warn('âš ï¸  Firebase nÃ£o configurado â€” modo demonstraÃ§Ã£o ativo.');
         firebaseReady = false;
     }
 
-    /* ══════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        THEME
-       ══════════════════════════════════════════ */
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     function toggleTheme() {
         document.body.classList.toggle('dark');
         const icon = document.getElementById('themeIcon');
@@ -92,9 +100,9 @@ async function checkSubscriptionAndRedirect(user) {
         }
     })();
 
-    /* ══════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        TAB SWITCHER
-       ══════════════════════════════════════════ */
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     function switchTab(tab) {
         const tabs = document.querySelectorAll('.tab');
         tabs.forEach((t, i) => {
@@ -106,9 +114,9 @@ async function checkSubscriptionAndRedirect(user) {
         document.getElementById('loginPanel').style.display = 'block';
     }
 
-    /* ══════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        FORGOT PASSWORD PANEL
-       ══════════════════════════════════════════ */
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     function showForgot() {
         document.getElementById('loginPanel').style.display = 'none';
         const fp = document.getElementById('forgotPanel');
@@ -121,9 +129,9 @@ async function checkSubscriptionAndRedirect(user) {
         document.getElementById('loginPanel').style.display  = 'block';
     }
 
-    /* ══════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        VALIDATION HELPERS
-       ══════════════════════════════════════════ */
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     function setValidIcon(iconId, state) {
         const el = document.getElementById(iconId);
         if (!el) return;
@@ -146,14 +154,14 @@ async function checkSubscriptionAndRedirect(user) {
     function validateLoginEmail(inp) {
         if (!inp.value) { showFieldError('loginEmailErr','',inp); setValidIcon('loginEmailIcon'); return; }
         const ok = isValidEmail(inp.value);
-        showFieldError('loginEmailErr', ok ? '' : 'Email inválido.', inp);
+        showFieldError('loginEmailErr', ok ? '' : 'Email invÃ¡lido.', inp);
         setValidIcon('loginEmailIcon', ok ? 'ok' : 'bad');
     }
 
     function validateLoginPassword(inp) {
         if (!inp.value) { showFieldError('loginPasswordErr','',inp); return; }
         const ok = inp.value.length >= 6;
-        showFieldError('loginPasswordErr', ok ? '' : 'Mínimo 6 caracteres.', inp);
+        showFieldError('loginPasswordErr', ok ? '' : 'MÃ­nimo 6 caracteres.', inp);
     }
 
     function validateRegName(inp) {
@@ -167,7 +175,7 @@ async function checkSubscriptionAndRedirect(user) {
     function validateRegEmail(inp) {
         if (!inp.value) { showFieldError('regEmailErr','',inp); setValidIcon('regEmailIcon'); return; }
         const ok = isValidEmail(inp.value);
-        showFieldError('regEmailErr', ok ? '' : 'Email inválido.', inp);
+        showFieldError('regEmailErr', ok ? '' : 'Email invÃ¡lido.', inp);
         setValidIcon('regEmailIcon', ok ? 'ok' : 'bad');
     }
 
@@ -175,7 +183,7 @@ async function checkSubscriptionAndRedirect(user) {
         const pw = document.getElementById('regPassword').value;
         if (!inp.value) { showFieldError('regConfirmErr','',inp); setValidIcon('regConfirmIcon'); return; }
         const ok = inp.value === pw;
-        showFieldError('regConfirmErr', ok ? '' : 'As senhas não coincidem.', inp);
+        showFieldError('regConfirmErr', ok ? '' : 'As senhas nÃ£o coincidem.', inp);
         setValidIcon('regConfirmIcon', ok ? 'ok' : 'bad');
     }
 
@@ -201,7 +209,7 @@ async function checkSubscriptionAndRedirect(user) {
             { pct:'40%', color:'#f97316', text:'Fraca' },
             { pct:'60%', color:'#f59e0b', text:'Moderada' },
             { pct:'80%', color:'#22c55e', text:'Forte' },
-            { pct:'100%',color:'#10b981', text:'Muito forte 🔒' },
+            { pct:'100%',color:'#10b981', text:'Muito forte ðŸ”’' },
         ];
         const l = levels[Math.min(score, 4)];
         fill.style.width = l.pct;
@@ -209,7 +217,7 @@ async function checkSubscriptionAndRedirect(user) {
         label.textContent = l.text;
         label.style.color = l.color;
 
-        showFieldError('regPasswordErr', pw.length < 8 ? 'Mínimo 8 caracteres.' : '', inp);
+        showFieldError('regPasswordErr', pw.length < 8 ? 'MÃ­nimo 8 caracteres.' : '', inp);
     }
 
     /* Avatar preview */
@@ -240,19 +248,19 @@ async function checkSubscriptionAndRedirect(user) {
         if (e.key === 'Enter') handleLogin();
     }
 
-    /* ══════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        DEMO FALLBACK (no Firebase configured)
-       ══════════════════════════════════════════ */
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     function demoLogin(displayName) {
-        showToast('success', 'Modo demonstração', `Bem-vindo, ${displayName || 'Usuário'}!`);
+        showToast('success', 'Modo demonstraÃ§Ã£o', `Bem-vindo, ${displayName || 'UsuÃ¡rio'}!`);
         setTimeout(async () => {
             await checkSubscriptionAndRedirect(user);
         }, 1400);
     }
 
-    /* ══════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        EMAIL / PASSWORD LOGIN
-       ══════════════════════════════════════════ */
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     async function handleLogin() {
         const email    = document.getElementById('loginEmail').value.trim();
         const password = document.getElementById('loginPassword').value;
@@ -261,7 +269,7 @@ async function checkSubscriptionAndRedirect(user) {
         // Basic validation
         let hasErr = false;
         if (!isValidEmail(email)) {
-            showFieldError('loginEmailErr', 'Informe um email válido.', document.getElementById('loginEmail'));
+            showFieldError('loginEmailErr', 'Informe um email vÃ¡lido.', document.getElementById('loginEmail'));
             hasErr = true;
         }
         if (password.length < 6) {
@@ -289,9 +297,9 @@ async function checkSubscriptionAndRedirect(user) {
         }
     }
 
-    /* ══════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        REGISTER
-       ══════════════════════════════════════════ */
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     async function handleRegister() {
         const name     = document.getElementById('regName').value.trim();
         const email    = document.getElementById('regEmail').value.trim();
@@ -306,19 +314,19 @@ async function checkSubscriptionAndRedirect(user) {
             hasErr = true;
         }
         if (!isValidEmail(email)) {
-            showFieldError('regEmailErr', 'Email inválido.', document.getElementById('regEmail'));
+            showFieldError('regEmailErr', 'Email invÃ¡lido.', document.getElementById('regEmail'));
             hasErr = true;
         }
         if (password.length < 8) {
-            showFieldError('regPasswordErr', 'Mínimo 8 caracteres.', document.getElementById('regPassword'));
+            showFieldError('regPasswordErr', 'MÃ­nimo 8 caracteres.', document.getElementById('regPassword'));
             hasErr = true;
         }
         if (password !== confirm) {
-            showFieldError('regConfirmErr', 'Senhas não coincidem.', document.getElementById('regConfirm'));
+            showFieldError('regConfirmErr', 'Senhas nÃ£o coincidem.', document.getElementById('regConfirm'));
             hasErr = true;
         }
         if (!agreed) {
-            showToast('warn', 'Atenção', 'Você precisa aceitar os Termos de Uso.');
+            showToast('warn', 'AtenÃ§Ã£o', 'VocÃª precisa aceitar os Termos de Uso.');
             hasErr = true;
         }
         if (hasErr) return;
@@ -342,7 +350,7 @@ async function checkSubscriptionAndRedirect(user) {
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
             }
-            showToast('success', 'Conta criada!', 'Bem-vindo ao NEXBOOK 🎉');
+            showToast('success', 'Conta criada!', 'Bem-vindo ao NEXBOOK ðŸŽ‰');
             // onAuthStateChanged handles redirect
         } catch (err) {
             setLoading(btn, false);
@@ -350,15 +358,15 @@ async function checkSubscriptionAndRedirect(user) {
         }
     }
 
-    /* ══════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        FORGOT PASSWORD
-       ══════════════════════════════════════════ */
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     async function handleForgotPassword() {
         const email = document.getElementById('forgotEmail').value.trim();
         const btn   = document.getElementById('forgotBtn');
 
         if (!isValidEmail(email)) {
-            showFieldError('forgotEmailErr', 'Informe um email válido.', document.getElementById('forgotEmail'));
+            showFieldError('forgotEmailErr', 'Informe um email vÃ¡lido.', document.getElementById('forgotEmail'));
             return;
         }
 
@@ -367,7 +375,7 @@ async function checkSubscriptionAndRedirect(user) {
         if (!firebaseReady) {
             setTimeout(() => {
                 setLoading(btn, false);
-                showToast('info', 'Demo', 'Link de redefinição enviado (simulação).');
+                showToast('info', 'Demo', 'Link de redefiniÃ§Ã£o enviado (simulaÃ§Ã£o).');
                 hideForgot();
             }, 1200);
             return;
@@ -384,11 +392,11 @@ async function checkSubscriptionAndRedirect(user) {
         }
     }
 
-    /* ══════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        SOCIAL PROVIDERS - APENAS GOOGLE E GITHUB
-       ══════════════════════════════════════════ */
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     async function signInWithGoogle() {
-        if (!firebaseReady) { demoLogin('Usuário Google'); return; }
+        if (!firebaseReady) { demoLogin('UsuÃ¡rio Google'); return; }
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.addScope('profile');
         provider.addScope('email');
@@ -398,7 +406,7 @@ async function checkSubscriptionAndRedirect(user) {
     }
 
     async function signInWithGitHub() {
-        if (!firebaseReady) { demoLogin('Usuário GitHub'); return; }
+        if (!firebaseReady) { demoLogin('UsuÃ¡rio GitHub'); return; }
         const provider = new firebase.auth.GithubAuthProvider();
         provider.addScope('user:email');
         try {
@@ -406,39 +414,39 @@ async function checkSubscriptionAndRedirect(user) {
         } catch (err) { handleAuthError(err); }
     }
 
-    /* ══════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        ERROR HANDLER
-       ══════════════════════════════════════════ */
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     function handleAuthError(err) {
         const map = {
-            'auth/user-not-found':         'Usuário não encontrado.',
+            'auth/user-not-found':         'UsuÃ¡rio nÃ£o encontrado.',
             'auth/wrong-password':         'Senha incorreta.',
-            'auth/invalid-email':          'Email inválido.',
-            'auth/email-already-in-use':   'Este email já está em uso.',
-            'auth/weak-password':          'Senha muito fraca (mín. 6 caracteres).',
+            'auth/invalid-email':          'Email invÃ¡lido.',
+            'auth/email-already-in-use':   'Este email jÃ¡ estÃ¡ em uso.',
+            'auth/weak-password':          'Senha muito fraca (mÃ­n. 6 caracteres).',
             'auth/too-many-requests':      'Muitas tentativas. Aguarde e tente novamente.',
-            'auth/network-request-failed': 'Sem conexão. Verifique sua internet.',
+            'auth/network-request-failed': 'Sem conexÃ£o. Verifique sua internet.',
             'auth/popup-closed-by-user':   'Login cancelado.',
             'auth/account-exists-with-different-credential':
-                                           'Email já cadastrado com outro método de login.',
-            'auth/invalid-credential':     'Credencial inválida. Tente novamente.',
+                                           'Email jÃ¡ cadastrado com outro mÃ©todo de login.',
+            'auth/invalid-credential':     'Credencial invÃ¡lida. Tente novamente.',
         };
         const msg = map[err.code] || `Erro: ${err.message}`;
         showToast('error', 'Falha no acesso', msg);
         console.error(err);
     }
 
-    /* ══════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        LOADING STATE
-       ══════════════════════════════════════════ */
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     function setLoading(btn, state) {
         btn.classList.toggle('loading', state);
         btn.disabled = state;
     }
 
-    /* ══════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        TOAST SYSTEM
-       ══════════════════════════════════════════ */
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     function showToast(type, title, message, duration = 4500) {
         const icons = { success:'fa-check-circle', error:'fa-times-circle', warn:'fa-exclamation-triangle', info:'fa-info-circle' };
         const container = document.getElementById('toastContainer');
@@ -450,7 +458,7 @@ async function checkSubscriptionAndRedirect(user) {
                 <strong>${title}</strong>
                 <span>${message}</span>
             </div>
-            <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+            <button class="toast-close" onclick="this.parentElement.remove()">Ã—</button>
         `;
         container.appendChild(toast);
         setTimeout(() => {
@@ -461,9 +469,9 @@ async function checkSubscriptionAndRedirect(user) {
         }, duration);
     }
 
-    /* ══════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        KEYBOARD SHORTCUTS
-       ══════════════════════════════════════════ */
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     document.addEventListener('keydown', e => {
         if (e.key === 'Enter' && !e.shiftKey) {
             const active = document.activeElement;
@@ -471,22 +479,22 @@ async function checkSubscriptionAndRedirect(user) {
         }
     });
 
-    /* ══════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        TEST NOTIFICATION
        FIX #2: currentUserId buscado do auth.currentUser
        FIX #3: showToast chamado com assinatura correta (type, title, message)
        FIX #4: chave } solta removida
-       ══════════════════════════════════════════ */
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     async function testNotification() {
-        // FIX #2: usar auth.currentUser em vez de variável inexistente
+        // FIX #2: usar auth.currentUser em vez de variÃ¡vel inexistente
         const currentUserId = auth && auth.currentUser ? auth.currentUser.uid : null;
 
         if (!currentUserId) {
-            showToast('warn', 'Atenção', 'Você precisa estar logado para testar notificações.');
+            showToast('warn', 'AtenÃ§Ã£o', 'VocÃª precisa estar logado para testar notificaÃ§Ãµes.');
             return;
         }
 
-        // Buscar o último agendamento
+        // Buscar o Ãºltimo agendamento
         let snapshot;
         try {
             snapshot = await db.collection('appointments')
@@ -500,7 +508,7 @@ async function checkSubscriptionAndRedirect(user) {
         }
 
         if (snapshot.empty) {
-            showToast('warn', 'Atenção', 'Crie um agendamento primeiro.');
+            showToast('warn', 'AtenÃ§Ã£o', 'Crie um agendamento primeiro.');
             return;
         }
 
@@ -521,13 +529,13 @@ async function checkSubscriptionAndRedirect(user) {
 
             // FIX #3: assinatura correta de showToast (type, title, message)
             if (result.success) {
-                showToast('success', 'Sucesso', 'Notificação de teste simulada com sucesso!');
+                showToast('success', 'Sucesso', 'NotificaÃ§Ã£o de teste simulada com sucesso!');
             } else {
                 showToast('error', 'Erro', result.error || 'Erro desconhecido.');
             }
         } catch (error) {
             console.error('Erro:', error);
-            showToast('error', 'Erro', 'Falha ao testar notificação: ' + error.message);
+            showToast('error', 'Erro', 'Falha ao testar notificaÃ§Ã£o: ' + error.message);
         }
     }
     // FIX #4: chave } solta que existia aqui foi removida

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -220,6 +220,10 @@
                 <i class="fas fa-users"></i>
                 <span data-i18n="clients">Clientes</span>
             </div>
+            <div class="nav-item" data-view="whatsapp">
+                <i class="fab fa-whatsapp"></i>
+                <span>WhatsApp</span>
+            </div>
             <div class="nav-item" data-view="users" data-permission="admin" style="display:none">
                 <i class="fas fa-users-cog"></i>
                 <span>Usuários</span>
@@ -268,7 +272,7 @@
         </div>
 
         <!-- Content -->
-        <div class="content">
+        <div class="content">`r`n            <div id="trialNoticeBanner" style="display:none; margin-bottom:16px; padding:14px 18px; border-radius:14px; background:linear-gradient(135deg,#fff7ed,#ffedd5); border:1px solid #fdba74; color:#9a3412; font-weight:600; box-shadow:0 8px 24px rgba(249,115,22,.12);">`r`n                <i class="fas fa-hourglass-half" style="margin-right:8px;"></i>`r`n                <span id="trialNoticeText">Seu período grátis termina em 7 dias.</span>`r`n            </div>
             <!-- Dashboard View -->
             <div id="dashboardView" class="view active">
                 <div class="global-filters">
@@ -470,7 +474,12 @@
                 <div class="table-container">
                     <div class="table-header">
                         <h2 data-i18n="clients">Clientes</h2>
-                        <div style="display: flex; gap: 10px;">
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                        <div class="search-box" style="margin-right: 10px;">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="clientSearchInput" placeholder="Buscar por nome ou CPF..." onkeyup="searchClients()" style="width: 250px;">
+                        </div>
+
                             <button class="btn-primary" onclick="openModal('client')">
                                 <i class="fas fa-plus"></i> <span data-i18n="newClient">Novo Cliente</span>
                             </button>
@@ -509,6 +518,37 @@
                 </div>
             </div>
             
+            <!-- WhatsApp View -->
+            <div id="whatsappView" class="view">
+                <div class="settings-grid">
+                    <div class="settings-card">
+                        <h3><i class="fab fa-whatsapp" style="color:#25D366"></i> WhatsApp</h3>
+                        <div class="settings-item" style="display:block;">
+                            <div class="settings-item-info" style="margin-bottom:16px;">
+                                <h4>Configurar WhatsApp do Cliente</h4>
+                                <p>Defina o WhatsApp do cliente. Para enviar pelo número dele, ele precisa estar logado no WhatsApp Web neste mesmo navegador.</p>
+                            </div>
+                            <div style="display:grid; gap:16px; max-width:560px;">
+                                <div>
+                                    <label style="display:block; margin-bottom:8px; font-weight:600;">Número do WhatsApp</label>
+                                    <input type="text" id="whatsappBusinessNumber" class="form-control" placeholder="5511999999999 ou (11) 99999-9999">
+                                    <small class="field-hint"><i class="fas fa-info-circle"></i> Esse número será usado no link do WhatsApp. O envio sairá da conta que estiver logada no WhatsApp Web neste navegador.</small>
+                                </div>
+                                <div>
+                                    <label style="display:block; margin-bottom:8px; font-weight:600;">Link do WhatsApp</label>
+                                    <input type="text" id="whatsappBusinessLink" class="form-control" placeholder="https://wa.me/5511999999999">
+                                    <small class="field-hint"><i class="fas fa-link"></i> Opcional. Se deixar em branco, o sistema gera o link automaticamente com base no número informado.</small>
+                                </div>
+                                <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                                    <button class="btn-primary" onclick="saveWhatsAppSettings()"><i class="fas fa-save"></i> Salvar WhatsApp</button>
+                                    <button class="btn-secondary" onclick="loadWhatsAppSettings()"><i class="fas fa-rotate"></i> Recarregar</button>
+                                    <button class="btn-secondary" onclick="openWhatsAppWebLogin()"><i class="fab fa-whatsapp"></i> Abrir WhatsApp Web</button>\n                                    <button class="btn-secondary" onclick="openConfiguredWhatsAppLink()"><i class="fas fa-paper-plane"></i> Testar envio</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <!-- Reports View -->
             <div id="reportsView" class="view">
                 <div class="reports-container">
@@ -1096,6 +1136,11 @@
     <script src="js/admin-users.js"></script>
 </body>
 </html>
+
+
+
+
+
 
 
 

@@ -66,7 +66,8 @@ async function loadBusinessSettings() {
         if (doc.exists) {
             const d = doc.data();
             state.businessName = d.companyName || 'NEXBOOK';
-            state.businessPhone = d.companyPhone || '';
+            state.businessPhone = d.whatsappBusinessNumber || d.companyPhone || '';
+            state.businessLink = d.whatsappBusinessLink || ''; 
             if (d.weekdayHours) state.workingHours.weekday = d.weekdayHours;
             if (d.saturdayHours) state.workingHours.saturday = d.saturdayHours;
             if (d.sundayHours) state.workingHours.sunday = d.sundayHours;
@@ -365,7 +366,9 @@ function openWhatsAppConfirm() {
         `Para confirmar minha presença: ${confirmUrl}`
     );
 
-    const url = target ? `https://wa.me/${target}?text=${msg}` : `https://wa.me/?text=${msg}`;
+    const url = state.businessLink
+        ? `${state.businessLink}${state.businessLink.includes('?') ? '&' : '?'}text=${msg}`
+        : (target ? `https://wa.me/${target}?text=${msg}` : `https://wa.me/?text=${msg}`);
     window.open(url, '_blank');
 }
 
@@ -431,3 +434,4 @@ function hideFieldError(id) {
     const el = document.getElementById(id);
     el.textContent = ''; el.classList.remove('visible');
 }
+

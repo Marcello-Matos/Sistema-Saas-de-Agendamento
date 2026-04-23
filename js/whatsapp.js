@@ -1,14 +1,14 @@
-/* ============================================
+﻿/* ============================================
    WHATSAPP INTEGRATION - NEXBOOK
    Envio de lembretes via WhatsApp para alunos
    ============================================ */
 
-// Variáveis globais
+// VariÃ¡veis globais
 let currentAppointmentForWhatsapp = null;
 let currentClientForWhatsapp = null;
 
 /* ============================================
-   FUNÇÕES DE UTILIDADE
+   FUNÃ‡Ã•ES DE UTILIDADE
    ============================================ */
 function showLoading(show) {
     let loadingEl = document.getElementById('whatsapp-loading');
@@ -72,7 +72,7 @@ function showToast(type, title, message) {
 }
 
 /* ============================================
-   FUNÇÃO PRINCIPAL - ABRIR MODAL DE SELEÇÃO DE ALUNOS
+   FUNÃ‡ÃƒO PRINCIPAL - ABRIR MODAL DE SELEÃ‡ÃƒO DE ALUNOS
    ============================================ */
 async function openWhatsAppSelectModal() {
     try {
@@ -80,23 +80,23 @@ async function openWhatsAppSelectModal() {
         
         // Verificar Firebase
         if (typeof auth === 'undefined' || !auth) {
-            showToast('error', 'Erro', 'Firebase não inicializado');
+            showToast('error', 'Erro', 'Firebase nÃ£o inicializado');
             return;
         }
         
         const user = auth.currentUser;
         if (!user) {
-            showToast('error', 'Erro', 'Faça login primeiro');
+            showToast('error', 'Erro', 'FaÃ§a login primeiro');
             window.location.href = 'index.html';
             return;
         }
         
         if (typeof db === 'undefined' || !db) {
-            showToast('error', 'Erro', 'Banco de dados não inicializado');
+            showToast('error', 'Erro', 'Banco de dados nÃ£o inicializado');
             return;
         }
         
-        // Buscar agendamentos dos próximos 7 dias
+        // Buscar agendamentos dos prÃ³ximos 7 dias
         const today = new Date();
         const nextWeek = new Date();
         nextWeek.setDate(nextWeek.getDate() + 7);
@@ -104,7 +104,7 @@ async function openWhatsAppSelectModal() {
         const todayStr = today.toISOString().split('T')[0];
         const nextWeekStr = nextWeek.toISOString().split('T')[0];
         
-        console.log('📅 Buscando agendamentos de', todayStr, 'até', nextWeekStr);
+        console.log('ðŸ“… Buscando agendamentos de', todayStr, 'atÃ©', nextWeekStr);
         
         const snapshot = await db.collection('appointments')
             .where('userId', '==', user.uid)
@@ -114,10 +114,10 @@ async function openWhatsAppSelectModal() {
             .orderBy('time')
             .get();
         
-        console.log('📊 Total de agendamentos encontrados:', snapshot.size);
+        console.log('ðŸ“Š Total de agendamentos encontrados:', snapshot.size);
         
         if (snapshot.empty) {
-            showToast('info', 'Sem agendamentos', 'Não há agendamentos para os próximos 7 dias');
+            showToast('info', 'Sem agendamentos', 'NÃ£o hÃ¡ agendamentos para os prÃ³ximos 7 dias');
             return;
         }
         
@@ -138,13 +138,13 @@ async function openWhatsAppSelectModal() {
             
             const client = clientDoc.data();
             
-            // Só mostrar quem tem telefone
+            // SÃ³ mostrar quem tem telefone
             if (!client.phone) continue;
             
             hasStudentsWithPhone = true;
             
-            // Buscar serviço
-            let serviceName = 'Serviço';
+            // Buscar serviÃ§o
+            let serviceName = 'ServiÃ§o';
             if (appointment.serviceId) {
                 const serviceDoc = await db.collection('services').doc(appointment.serviceId).get();
                 if (serviceDoc.exists) {
@@ -192,7 +192,7 @@ async function openWhatsAppSelectModal() {
                     <div class="student-info">
                         <div class="student-name">${client.name}</div>
                         <div class="student-details">
-                            📅 ${formattedDate} às ${appointment.time || '--:--'} | ${serviceName}
+                            ðŸ“… ${formattedDate} Ã s ${appointment.time || '--:--'} | ${serviceName}
                         </div>
                         <div class="student-phone">
                             <i class="fab fa-whatsapp"></i> ${formatPhoneNumber(client.phone)}
@@ -206,7 +206,7 @@ async function openWhatsAppSelectModal() {
             
             // Evento de clique no card
             card.addEventListener('click', () => {
-                // Abrir modal de confirmação com os dados deste agendamento
+                // Abrir modal de confirmaÃ§Ã£o com os dados deste agendamento
                 openWhatsAppModal(appointment.id);
                 closeSelectModal();
             });
@@ -214,12 +214,12 @@ async function openWhatsAppSelectModal() {
             studentList.appendChild(card);
         }
         
-        // Se não encontrou nenhum aluno com telefone
+        // Se nÃ£o encontrou nenhum aluno com telefone
         if (!hasStudentsWithPhone) {
             studentList.innerHTML = `
                 <div style="text-align: center; padding: 40px;">
                     <i class="fas fa-exclamation-circle" style="font-size: 48px; color: var(--text-secondary);"></i>
-                    <p style="margin-top: 16px; color: var(--text-secondary);">Nenhum aluno com telefone cadastrado para os próximos 7 dias</p>
+                    <p style="margin-top: 16px; color: var(--text-secondary);">Nenhum aluno com telefone cadastrado para os prÃ³ximos 7 dias</p>
                 </div>
             `;
         }
@@ -239,7 +239,7 @@ async function openWhatsAppSelectModal() {
 }
 
 /* ============================================
-   FUNÇÃO PARA FILTRAR ALUNOS NA LISTA
+   FUNÃ‡ÃƒO PARA FILTRAR ALUNOS NA LISTA
    ============================================ */
 function filterStudentList() {
     const searchTerm = document.getElementById('searchStudent').value.toLowerCase().trim();
@@ -256,7 +256,7 @@ function filterStudentList() {
 }
 
 /* ============================================
-   FUNÇÃO PARA ABRIR MODAL DE CONFIRMAÇÃO
+   FUNÃ‡ÃƒO PARA ABRIR MODAL DE CONFIRMAÃ‡ÃƒO
    ============================================ */
 async function openWhatsAppModal(appointmentId) {
     try {
@@ -264,7 +264,7 @@ async function openWhatsAppModal(appointmentId) {
         
         const user = auth.currentUser;
         if (!user) {
-            showToast('error', 'Erro', 'Faça login primeiro');
+            showToast('error', 'Erro', 'FaÃ§a login primeiro');
             return;
         }
         
@@ -272,7 +272,7 @@ async function openWhatsAppModal(appointmentId) {
         const appointmentDoc = await db.collection('appointments').doc(appointmentId).get();
         
         if (!appointmentDoc.exists) {
-            showToast('error', 'Erro', 'Agendamento não encontrado');
+            showToast('error', 'Erro', 'Agendamento nÃ£o encontrado');
             return;
         }
         
@@ -281,7 +281,7 @@ async function openWhatsAppModal(appointmentId) {
         
         // Verificar clientId
         if (!appointment.clientId) {
-            showToast('error', 'Erro', 'Agendamento não possui cliente');
+            showToast('error', 'Erro', 'Agendamento nÃ£o possui cliente');
             return;
         }
         
@@ -289,7 +289,7 @@ async function openWhatsAppModal(appointmentId) {
         const clientDoc = await db.collection('clients').doc(appointment.clientId).get();
         
         if (!clientDoc.exists) {
-            showToast('error', 'Erro', 'Cliente não encontrado');
+            showToast('error', 'Erro', 'Cliente nÃ£o encontrado');
             return;
         }
         
@@ -298,14 +298,14 @@ async function openWhatsAppModal(appointmentId) {
         
         // Verificar telefone
         if (!client.phone) {
-            showToast('error', 'Erro', 'Cliente não possui telefone cadastrado');
+            showToast('error', 'Erro', 'Cliente nÃ£o possui telefone cadastrado');
             return;
         }
         
         // Exibir dados no modal
         displayAppointmentInfo(appointment, client);
         
-        // Abrir modal de confirmação
+        // Abrir modal de confirmaÃ§Ã£o
         const modal = document.getElementById('whatsappConfirmModal');
         if (modal) {
             modal.style.display = 'flex';
@@ -320,7 +320,7 @@ async function openWhatsAppModal(appointmentId) {
 }
 
 /* ============================================
-   EXIBIR INFORMAÇÕES NO MODAL DE CONFIRMAÇÃO
+   EXIBIR INFORMAÃ‡Ã•ES NO MODAL DE CONFIRMAÃ‡ÃƒO
    ============================================ */
 function displayAppointmentInfo(appointment, client) {
     const infoDiv = document.getElementById('whatsappAppointmentInfo');
@@ -328,7 +328,7 @@ function displayAppointmentInfo(appointment, client) {
     
     if (!infoDiv || !phoneSpan) return;
     
-    // CORREÇÃO: Formatar data corretamente
+    // CORREÃ‡ÃƒO: Formatar data corretamente
     let formattedDate = '';
     let formattedTime = '';
     
@@ -357,10 +357,10 @@ function displayAppointmentInfo(appointment, client) {
             });
         }
     } else {
-        formattedDate = 'Data não informada';
+        formattedDate = 'Data nÃ£o informada';
     }
     
-    // CORREÇÃO: Usar appointment.time para o horário
+    // CORREÃ‡ÃƒO: Usar appointment.time para o horÃ¡rio
     if (appointment.time) {
         formattedTime = appointment.time;
     } else {
@@ -372,7 +372,7 @@ function displayAppointmentInfo(appointment, client) {
     phoneSpan.textContent = formattedPhone;
     
     // Nomes
-    const serviceName = appointment.serviceName || appointment.service || 'Serviço';
+    const serviceName = appointment.serviceName || appointment.service || 'ServiÃ§o';
     const professionalName = appointment.professionalName || appointment.professional || 'Profissional';
     const clientName = client.name || client.displayName || 'Aluno';
     
@@ -393,13 +393,13 @@ function displayAppointmentInfo(appointment, client) {
                 <div style="font-weight: 600; font-size: 14px;">${formattedDate}</div>
             </div>
             <div style="background: #f1f5f9; padding: 10px; border-radius: 8px;">
-                <div style="color: #475569; font-size: 11px; margin-bottom: 4px;">HORÁRIO</div>
+                <div style="color: #475569; font-size: 11px; margin-bottom: 4px;">HORÃRIO</div>
                 <div style="font-weight: 600; font-size: 14px;">${formattedTime}</div>
             </div>
         </div>
         
         <div style="background: #f1f5f9; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
-            <div style="color: #475569; font-size: 11px; margin-bottom: 4px;">SERVIÇO</div>
+            <div style="color: #475569; font-size: 11px; margin-bottom: 4px;">SERVIÃ‡O</div>
             <div style="font-weight: 600; font-size: 14px;">${serviceName}</div>
         </div>
         
@@ -411,11 +411,11 @@ function displayAppointmentInfo(appointment, client) {
 }
 
 /* ============================================
-   ENVIAR LEMBRETE VIA WHATSAPP (VERSÃO CORRIGIDA - EMOJIS UNIVERSAIS)
+   ENVIAR LEMBRETE VIA WHATSAPP (VERSÃƒO CORRIGIDA - EMOJIS UNIVERSAIS)
    ============================================ */
 async function sendWhatsAppReminder() {
     if (!currentAppointmentForWhatsapp || !currentClientForWhatsapp) {
-        showToast('error', 'Erro', 'Dados não encontrados');
+        showToast('error', 'Erro', 'Dados nÃ£o encontrados');
         return;
     }
     
@@ -427,11 +427,11 @@ async function sendWhatsAppReminder() {
         
         // Validar telefone
         if (!client.phone) {
-            showToast('error', 'Erro', 'Telefone não cadastrado');
+            showToast('error', 'Erro', 'Telefone nÃ£o cadastrado');
             return;
         }
         
-        // CORREÇÃO: Formatar data corretamente
+        // CORREÃ‡ÃƒO: Formatar data corretamente
         let formattedDate = '';
         let formattedTime = '';
         
@@ -455,10 +455,10 @@ async function sendWhatsAppReminder() {
                 });
             }
         } else {
-            formattedDate = 'Data não informada';
+            formattedDate = 'Data nÃ£o informada';
         }
         
-        // CORREÇÃO: Usar appointment.time para o horário
+        // CORREÃ‡ÃƒO: Usar appointment.time para o horÃ¡rio
         if (appointment.time) {
             formattedTime = appointment.time;
         } else {
@@ -475,66 +475,66 @@ async function sendWhatsAppReminder() {
         }
         
         // Nomes
-        const serviceName = appointment.serviceName || appointment.service || 'serviço';
+        const serviceName = appointment.serviceName || appointment.service || 'serviÃ§o';
         const professionalName = appointment.professionalName || appointment.professional || 'profissional';
         const clientName = client.name || client.displayName || 'aluno';
         
-        // VERSÃO 1: Usando apenas caracteres especiais (100% compatível)
-        let message = `Olá ${clientName}!\n\n`;
+        // VERSÃƒO 1: Usando apenas caracteres especiais (100% compatÃ­vel)
+        let message = `OlÃ¡ ${clientName}!\n\n`;
         message += `LEMBRETE DE AGENDAMENTO\n`;
         message += `-----------------------\n\n`;
         message += `Data: ${formattedDate}\n`;
-        message += `Horário: ${formattedTime}\n`;
-        message += `Serviço: ${serviceName}\n`;
+        message += `HorÃ¡rio: ${formattedTime}\n`;
+        message += `ServiÃ§o: ${serviceName}\n`;
         message += `Profissional: ${professionalName}\n\n`;
-        message += `Por favor confirme sua presença.\n`;
-        message += `Qualquer dúvida estamos à disposição.\n\n`;
+        message += `Por favor confirme sua presenÃ§a.\n`;
+        message += `Qualquer dÃºvida estamos Ã  disposiÃ§Ã£o.\n\n`;
         message += `NEXBOOK`;
         
-        // VERSÃO 2: Alternativa sem emojis (usando apenas texto)
+        // VERSÃƒO 2: Alternativa sem emojis (usando apenas texto)
         /*
-        let message = `Olá *${clientName}*!\n\n`;
+        let message = `OlÃ¡ *${clientName}*!\n\n`;
         message += `*LEMBRETE DE AGENDAMENTO*\n`;
-        message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-        message += `🗓️ DATA: ${formattedDate}\n`;
-        message += `⏱️ HORÁRIO: ${formattedTime}\n`;
-        message += `✂️ SERVIÇO: ${serviceName}\n`;
-        message += `👤 PROFISSIONAL: ${professionalName}\n\n`;
-        message += `👉 Por favor, confirme sua presença!\n`;
-        message += `Qualquer dúvida, estamos à disposição.\n\n`;
-        message += `📱 NEXBOOK`;
+        message += `â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\n`;
+        message += `ðŸ—“ï¸ DATA: ${formattedDate}\n`;
+        message += `â±ï¸ HORÃRIO: ${formattedTime}\n`;
+        message += `âœ‚ï¸ SERVIÃ‡O: ${serviceName}\n`;
+        message += `ðŸ‘¤ PROFISSIONAL: ${professionalName}\n\n`;
+        message += `ðŸ‘‰ Por favor, confirme sua presenÃ§a!\n`;
+        message += `Qualquer dÃºvida, estamos Ã  disposiÃ§Ã£o.\n\n`;
+        message += `ðŸ“± NEXBOOK`;
         */
         
-        // VERSÃO 3: Apenas texto (compatibilidade máxima)
+        // VERSÃƒO 3: Apenas texto (compatibilidade mÃ¡xima)
         /*
-        let message = `Olá ${clientName}!\n\n`;
+        let message = `OlÃ¡ ${clientName}!\n\n`;
         message += `LEMBRETE DE AGENDAMENTO\n`;
         message += `------------------------\n\n`;
         message += `Data: ${formattedDate}\n`;
-        message += `Horário: ${formattedTime}\n`;
-        message += `Serviço: ${serviceName}\n`;
+        message += `HorÃ¡rio: ${formattedTime}\n`;
+        message += `ServiÃ§o: ${serviceName}\n`;
         message += `Profissional: ${professionalName}\n\n`;
-        message += `Por favor, confirme sua presença!\n`;
-        message += `Qualquer dúvida, estamos à disposição.\n\n`;
+        message += `Por favor, confirme sua presenÃ§a!\n`;
+        message += `Qualquer dÃºvida, estamos Ã  disposiÃ§Ã£o.\n\n`;
         message += `NEXBOOK`;
         */
         
         // Adicionar mensagem personalizada
         if (customMessage) {
-            message += `\n\n💬 *Mensagem adicional:*\n${customMessage}`;
+            message += `\n\nðŸ’¬ *Mensagem adicional:*\n${customMessage}`;
         }
         
-        // Limpar número (remover tudo que não é dígito)
+        // Limpar nÃºmero (remover tudo que nÃ£o Ã© dÃ­gito)
         let phoneNumber = client.phone.replace(/\D/g, '');
         
-        // Adicionar código do Brasil (55) se necessário
-        if (phoneNumber.length === 11) { // Celular com DDD (11 dígitos)
+        // Adicionar cÃ³digo do Brasil (55) se necessÃ¡rio
+        if (phoneNumber.length === 11) { // Celular com DDD (11 dÃ­gitos)
             phoneNumber = '55' + phoneNumber;
-        } else if (phoneNumber.length === 10) { // Telefone fixo com DDD (10 dígitos)
+        } else if (phoneNumber.length === 10) { // Telefone fixo com DDD (10 dÃ­gitos)
             phoneNumber = '55' + phoneNumber;
-        } else if (phoneNumber.length === 9) { // Celular sem DDD (9 dígitos)
+        } else if (phoneNumber.length === 9) { // Celular sem DDD (9 dÃ­gitos)
             phoneNumber = '5511' + phoneNumber;
-        } else if (phoneNumber.length === 8) { // Telefone fixo sem DDD (8 dígitos)
+        } else if (phoneNumber.length === 8) { // Telefone fixo sem DDD (8 dÃ­gitos)
             phoneNumber = '5511' + phoneNumber;
         }
         
@@ -544,11 +544,19 @@ async function sendWhatsAppReminder() {
         // Fechar modal
         closeWhatsappModal();
         
-        // Abrir WhatsApp
-        const whatsappLink = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+        // Abrir WhatsApp usando o link/número configurado pelo cliente
+        const waConfig = await getConfiguredBusinessWhatsApp();
+        let whatsappLink = '';
+        if (waConfig.link) {
+            whatsappLink = waConfig.link + (waConfig.link.includes('?') ? '&' : '?') + 'text=' + encodeURIComponent(message);
+        } else if (waConfig.number) {
+            whatsappLink = `https://wa.me/${waConfig.number}?text=${encodeURIComponent(message)}`;
+        } else {
+            whatsappLink = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+        }
         window.open(whatsappLink, '_blank');
         
-        showToast('success', 'Sucesso!', 'WhatsApp aberto com a mensagem');
+        showToast('success', 'Sucesso!', 'WhatsApp Web aberto. A mensagem sairá da conta que estiver logada neste navegador.');
         
     } catch (error) {
         console.error('Erro:', error);
@@ -561,7 +569,7 @@ async function sendWhatsAppReminder() {
    FORMATAR TELEFONE
    ============================================ */
 function formatPhoneNumber(phone) {
-    if (!phone) return 'Número não cadastrado';
+    if (!phone) return 'NÃºmero nÃ£o cadastrado';
     
     const numbers = phone.replace(/\D/g, '');
     
@@ -669,7 +677,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// EXPOR FUNÇÕES GLOBALMENTE
+// EXPOR FUNÃ‡Ã•ES GLOBALMENTE
 window.openWhatsAppSelectModal = openWhatsAppSelectModal;
 window.filterStudentList = filterStudentList;
 window.openWhatsAppModal = openWhatsAppModal;
@@ -677,3 +685,26 @@ window.sendWhatsAppReminder = sendWhatsAppReminder;
 window.toggleWhatsappMessage = toggleWhatsappMessage;
 window.closeWhatsappModal = closeWhatsappModal;
 window.closeSelectModal = closeSelectModal;
+async function getConfiguredBusinessWhatsApp() {
+    try {
+        let userId = window.currentUserId || (window.auth && auth.currentUser && auth.currentUser.uid) || null;
+        if (!userId) {
+            return {
+                number: (localStorage.getItem('whatsappBusinessNumber') || '').replace(/\D/g, ''),
+                link: localStorage.getItem('whatsappBusinessLink') || ''
+            };
+        }
+        const doc = await db.collection('settings').doc(userId).get();
+        const data = doc.exists ? doc.data() : {};
+        return {
+            number: String(data.whatsappBusinessNumber || localStorage.getItem('whatsappBusinessNumber') || '').replace(/\D/g, ''),
+            link: String(data.whatsappBusinessLink || localStorage.getItem('whatsappBusinessLink') || '')
+        };
+    } catch (e) {
+        return {
+            number: (localStorage.getItem('whatsappBusinessNumber') || '').replace(/\D/g, ''),
+            link: localStorage.getItem('whatsappBusinessLink') || ''
+        };
+    }
+}
+

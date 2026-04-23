@@ -1,4 +1,4 @@
-// admin-users.js
+﻿// admin-users.js
 
 const AU_PERMS = [
   { key: 'verFinanceiro',          label: 'Faturamento',      icon: 'fa-dollar-sign',  color: '#f59e0b' },
@@ -142,3 +142,32 @@ async function auCreateUser() {
   }
   btn.disabled=false; btn.innerHTML='<i class="fas fa-user-plus"></i> Criar Usuário';
 }
+async function auFindUserByEmail() {
+  var email = (document.getElementById('auEmail').value || '').trim().toLowerCase();
+  if (!email) { alert('Digite o e-mail do usuário.'); return null; }
+  const snap = await firebase.firestore().collection('users').where('email','==',email).limit(1).get();
+  if (snap.empty) { alert('Usuário não encontrado com esse e-mail.'); return null; }
+  const doc = snap.docs[0];
+  return { id: doc.id, data: doc.data() };
+}
+
+async function auGrantTrial(days) {
+  try {
+    var found = await auFindUserByEmail();
+    if (!found) return;
+    var btn = document.getElementById('auTrialBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Liberando...'; }
+    var fn = firebase.app().functions('southamerica-east1');
+    await fn.httpsCallable('grantTrialAccess')({ targetUid: found.id, days: days || 7, email: found.data.email || '' });
+    if (typeof showNotification==='function') showNotification('Acesso liberado por ' + (days||7) + ' dias para ' + (found.data.email || found.id), 'success');
+    else alert('Acesso liberado com sucesso!');
+  } catch(e) {
+    alert('Erro ao liberar acesso: ' + (e.message || e));
+  } finally {
+    var btn = document.getElementById('auTrialBtn');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-bolt"></i> Liberar 7 dias'; }
+  }
+}
+
+
+

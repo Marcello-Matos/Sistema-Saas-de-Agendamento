@@ -257,3 +257,77 @@ exports.createUser = onCall(
     return { uid, email, name };
   }
 );
+
+// ── Cloud Function: Liberar acesso trial manual (admin only) ─────────────
+exports.grantTrialAccess = onCall(
+  { region: "southamerica-east1" },
+  async (request) => {
+    const callerUid = request.auth && request.auth.uid;
+    if (!callerUid) throw new Error("Nao autenticado");
+    if (!ADMIN_UIDS.includes(callerUid)) throw new Error("Sem permissao");
+
+    const { targetUid, days, email } = request.data || {};
+    if (!targetUid) throw new Error("targetUid obrigatorio");
+
+    const trialDays = Number(days || 7);
+    const now = admin.firestore.Timestamp.now();
+    const expires = admin.firestore.Timestamp.fromDate(new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000));
+
+    await db.collection("subscriptions").doc(String(targetUid)).set({
+      status: "active",
+      plan: "trial",
+      startDate: now,
+      expiresAt: expires,
+      updatedAt: now,
+      grantedBy: callerUid,
+      trialDays: trialDays,
+      email: email || ""
+    }, { merge: true });
+
+    return { success: true, targetUid, trialDays };
+  }
+);
+
+// ── Cloud Function: Garantir trial automático no primeiro acesso ──────────
+exports.ensureTrialAccess = onCall(
+  { region: "southamerica-east1" },
+  async (request) => {
+    const uid = request.auth && request.auth.uid;
+    if (!uid) throw new Error("Nao autenticado");
+
+    if (ADMIN_UIDS.includes(uid)) {
+      return { success: true, admin: true, trialCreated: false };
+    }
+
+    const userDoc = await db.collection("users").doc(uid).get();
+    if (userDoc.exists && userDoc.data().createdBy) {
+      return { success: true, employee: true, trialCreated: false };
+    }
+
+    const subRef = db.collection("subscriptions").doc(uid);
+    const subDoc = await subRef.get();
+
+    if (subDoc.exists) {
+      const sub = subDoc.data() || {};
+      if (sub.status && sub.expiresAt) {
+        return { success: true, trialCreated: false, alreadyExists: true };
+      }
+    }
+
+    const now = admin.firestore.Timestamp.now();
+    const expires = admin.firestore.Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+
+    await subRef.set({
+      status: "active",
+      plan: "trial",
+      startDate: now,
+      expiresAt: expires,
+      updatedAt: now,
+      trialDays: 7,
+      automaticTrial: true,
+      email: (request.auth.token && request.auth.token.email) || ""
+    }, { merge: true });
+
+    return { success: true, trialCreated: true, trialDays: 7 };
+  }
+);
