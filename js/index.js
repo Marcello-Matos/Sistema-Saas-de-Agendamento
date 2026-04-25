@@ -22,13 +22,13 @@ const ADMIN_UIDS = ["Nrq4TYVDGsfboHOPDx7csCF0QSi2","O525l43Yzxatu5ckI7k8J1VLfjU2
 
 async function checkSubscriptionAndRedirect(user) {
     if (!user) { window.location.href = 'index.html'; return; }
-    if (ADMIN_UIDS.includes(user.uid)) { window.location.href = 'dashboard.html'; return; }
+    if (ADMIN_UIDS.includes(user.uid)) { window.location.href = 'boas-vindas.html'; return; }
     try {
         const db = firebase.firestore();
         // Verificar se eh funcionario criado pelo admin (tem createdBy)
         const userDoc = await db.collection('users').doc(user.uid).get();
         if (userDoc.exists && userDoc.data().createdBy) {
-            window.location.href = 'dashboard.html'; return;
+            window.location.href = 'boas-vindas.html'; return;
         }
 
         // CORRECAO: Criar trial localmente se a funcao falhar
@@ -62,7 +62,7 @@ async function checkSubscriptionAndRedirect(user) {
 
         // Se o trial foi criado agora, vai direto pro dashboard
         if (trialCreated) {
-            window.location.href = 'dashboard.html';
+            window.location.href = 'boas-vindas.html';
             return;
         }
 
@@ -72,13 +72,13 @@ async function checkSubscriptionAndRedirect(user) {
             const now = new Date();
             const exp = sub.expiresAt && sub.expiresAt.toDate ? sub.expiresAt.toDate() : new Date(0);
             if (sub.status === 'active' && exp > now) {
-                window.location.href = 'dashboard.html'; return;
+                window.location.href = 'boas-vindas.html'; return;
             }
         }
         window.location.href = 'pagamento.html?uid=' + user.uid + '&email=' + encodeURIComponent(user.email || '');
     } catch(e) {
         console.error('checkSubscription error:', e);
-        window.location.href = 'dashboard.html';
+        window.location.href = 'boas-vindas.html';
     }
 }
         auth = firebase.auth();
