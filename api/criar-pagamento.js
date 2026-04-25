@@ -1,13 +1,13 @@
-﻿// api/criar-pagamento.js
-import mercadopago from 'mercadopago';
+// api/criar-pagamento.js
+const mercadopago = require('mercadopago');
 
 mercadopago.configure({
   access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN
 });
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Método não permitido' });
+    return res.status(405).json({ error: 'Metodo nao permitido' });
   }
 
   const { plano, userId, email } = req.body || {};
@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   };
 
   if (!plano || !precos[plano]) {
-    return res.status(400).json({ error: 'Plano inválido' });
+    return res.status(400).json({ error: 'Plano invalido' });
   }
 
   try {
@@ -53,4 +53,4 @@ export default async function handler(req, res) {
     console.error('Erro ao criar pagamento:', error);
     return res.status(500).json({ error: error.message || 'Erro interno' });
   }
-}
+};

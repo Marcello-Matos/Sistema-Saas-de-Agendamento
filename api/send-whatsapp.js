@@ -1,7 +1,7 @@
-﻿// api/send-whatsapp.js
-import twilio from 'twilio';
+// api/send-whatsapp.js
+const twilio = require('twilio');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Método não permitido' });
+    return res.status(405).json({ error: 'Metodo nao permitido' });
   }
 
   try {
@@ -34,4 +34,4 @@ export default async function handler(req, res) {
     console.error('Erro ao enviar WhatsApp:', error);
     return res.status(500).json({ error: error.message || 'Erro interno' });
   }
-}
+};
