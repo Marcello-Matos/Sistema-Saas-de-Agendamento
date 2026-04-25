@@ -35,10 +35,13 @@ async function checkSubscriptionAndRedirect(user) {
         let trialCreated = false;
         try {
             const fn = firebase.app().functions('southamerica-east1');
+            console.log('Chamando ensureTrialAccess...');
             const result = await fn.httpsCallable('ensureTrialAccess')({});
+            console.log('Resultado ensureTrialAccess:', result.data);
             trialCreated = result.data && result.data.trialCreated;
         } catch (trialError) {
-            console.warn('ensureTrialAccess error:', trialError);
+            console.error('ensureTrialAccess error:', trialError);
+            showToast('error', 'Erro no trial', trialError.message || 'Erro ao criar trial');
         }
 
         // Se o trial foi criado agora, vai direto pro dashboard
