@@ -32,11 +32,19 @@ async function checkSubscriptionAndRedirect(user) {
         }
 
         // Garantir trial automatico no primeiro acesso
+        let trialCreated = false;
         try {
             const fn = firebase.app().functions('southamerica-east1');
-            await fn.httpsCallable('ensureTrialAccess')({});
+            const result = await fn.httpsCallable('ensureTrialAccess')({});
+            trialCreated = result.data && result.data.trialCreated;
         } catch (trialError) {
             console.warn('ensureTrialAccess error:', trialError);
+        }
+
+        // Se o trial foi criado agora, vai direto pro dashboard
+        if (trialCreated) {
+            window.location.href = 'dashboard.html';
+            return;
         }
 
         const doc = await db.collection('subscriptions').doc(user.uid).get();
