@@ -1,0 +1,4 @@
+﻿.vscode/
+.firebase/
+functions/node_modules/
+node_modules/
