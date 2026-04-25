@@ -1,4 +1,5 @@
-﻿.vscode/
-.firebase/
-functions/node_modules/
-node_modules/
+﻿functions/
+firebase.json
+.firebaserc
+firestore.rules
+firestore.indexes.json
